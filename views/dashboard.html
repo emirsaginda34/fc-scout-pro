@@ -187,13 +187,25 @@
                 Favorilerim
             </button>
         </div>
+        <button id="wonderkids-btn" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-6 rounded-lg transition-all duration-200 shadow-lg flex items-center gap-2">
+    <span>💎</span> META PLAYERS
+</button>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex items-center gap-2 flex-nowrap whitespace-nowrap">
         <span class="text-[10px] text-emerald-500/50 font-black tracking-widest uppercase mr-1">Sırala:</span>
-        <button onclick="sortPlayers('rating')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">Reyting ↓</button> 
-        <button onclick="sortPlayers('pace')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">Hız ↓</button>
-        <button onclick="sortPlayers('age')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">Yaş ↑</button>
+        
+        <button onclick="sortPlayers('rating')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">
+            Reyting ↓
+        </button> 
+        
+        <button onclick="sortPlayers('pace')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">
+            Hız ↓
+        </button>
+        
+        <button onclick="sortPlayers('age')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">
+            Yaş ↑
+        </button>
     </div>
 
 </div>
@@ -474,6 +486,77 @@
     </div>
 </div>`;
 }).join('');
+  // 1. Wonderkids Verisini Çeken Fonksiyon
+async function loadWonderkids() {
+    try {
+        // 1. Senin asıl kart alanını seçiyoruz
+        const playerGrid = document.getElementById('player-grid'); 
+        
+        if (!playerGrid) {
+            console.error("player-grid bulunamadı!");
+            return;
+        }
+
+        // Yükleniyor efekti verelim
+        playerGrid.innerHTML = '<div class="col-span-full text-center py-10 text-emerald-500 font-bold animate-pulse">Meta oyuncular taranıyor...</div>';
+
+        // 2. Backend'e istek atıyoruz
+        const response = await fetch(`http://localhost:3000/api/wonderkids`);
+        const wonderkids = await response.json();
+
+        // Alanı temizle
+        playerGrid.innerHTML = '';
+
+        if (wonderkids.length === 0) {
+            playerGrid.innerHTML = '<div class="col-span-full text-center py-10 text-red-400 font-bold">Kriterlere uygun genç yetenek bulunamadı.</div>';
+            return;
+        }
+
+        // 3. Her bir Wonderkid için senin tasarımına uygun KART oluşturuyoruz
+       wonderkids.forEach(player => {
+            const metaScore = Math.round(player.potential); // Backend'den gelen puan
+            
+            const card = `
+                <div class="bg-emerald-900/20 border border-emerald-500/10 rounded-2xl p-5 hover:border-emerald-500/30 transition-all duration-300 backdrop-blur-sm relative group overflow-hidden">
+                    
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-white font-bold text-lg tracking-tight">${player.name}</h3>
+                            <p class="text-emerald-500/70 text-xs font-bold uppercase">${player.team || 'Bilinmiyor'}</p>
+                        </div>
+                        <span class="text-xs bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded-lg font-bold">🔥 META</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-emerald-950/50 p-3 rounded-xl text-center">
+                            <p class="text-[10px] text-emerald-500/50 font-black uppercase">OVR</p>
+                            <p class="text-2xl font-black text-white">${player.rating}</p>
+                        </div>
+                        <div class="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-center">
+                            <p class="text-[10px] text-emerald-400 font-black uppercase">Güç Puanı</p>
+                            <p class="text-2xl font-black text-emerald-400">⚡ ${metaScore}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center text-xs text-emerald-500/70 font-bold">
+                        <span>ULKE: <span class="text-white">${player.nation || 'N/A'}</span></span>
+                        <span>MEVKİ: <span class="text-emerald-400">${player.pos || 'N/A'}</span></span>
+                    </div>
+                </div>
+            `;
+            playerGrid.insertAdjacentHTML('beforeend', card);
+        });
+
+    } catch (error) {
+        console.error("Wonderkids yükleme hatası:", error);
+        alert("Genç yetenekler yüklenirken bir hata oluştu.");
+    }
+}
+
+// 2. Butona Tıklama Olayını Bağlama
+document.getElementById('wonderkids-btn').addEventListener('click', loadWonderkids);
         
 
         renderPaginationButtons(currentList.length, playersPerPage, currentPage, currentList);

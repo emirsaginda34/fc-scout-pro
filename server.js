@@ -115,6 +115,54 @@ app.get('/api/players', async (req, res) => {
     }
 });
 
+app.get('/api/wonderkids', async (req, res) => {
+    try {
+        // 1. Veritabanından tüm oyuncuları çekiyoruz
+        const players = await Player.find({});
+
+        // 2. Her oyuncu için mevkisine göre "Meta Güç Puanı" hesaplıyoruz
+        const enrichedMetaPlayers = players.map(p => {
+            const playerObj = p.toObject();
+            
+            const pace = Number(playerObj.pace) || 0;
+            const shoot = Number(playerObj.shoot) || 0;
+            const pass = Number(playerObj.pass) || 0;
+            const drib = Number(playerObj.drib) || 0;
+            const def = Number(playerObj.def) || 0;
+            const phy = Number(playerObj.phy) || 0;
+
+            let metaScore = 0;
+            const pos = playerObj.pos ? playerObj.pos.toUpperCase() : '';
+
+            // MEVKİYE GÖRE ÖZEL FORMÜL (Örn: Defans için defans ve fizik, forvet için şut ve hız önemlidir)
+            if (['ST', 'LW', 'RW', 'CF'].includes(pos)) {
+                metaScore = (pace * 0.35) + (shoot * 0.35) + (drib * 0.20) + (pass * 0.10);
+            } else if (['CAM', 'CM', 'LM', 'RM'].includes(pos)) {
+                metaScore = (pass * 0.30) + (drib * 0.30) + (pace * 0.20) + (shoot * 0.20);
+            } else if (['CB', 'RB', 'LB', 'CDM', 'RWB', 'LWB'].includes(pos)) {
+                metaScore = (def * 0.35) + (phy * 0.25) + (pace * 0.30) + (pass * 0.10);
+            } else {
+                // Pozisyon belirsizse düz ortalama al
+                metaScore = (pace + shoot + pass + drib + def + phy) / 6;
+            }
+
+            return {
+                ...playerObj,
+                potential: metaScore // Frontend'i bozmamak için hesaplanan Meta Puanı 'potential' değişkenine atıyoruz
+            };
+        });
+
+        // 3. Meta puanı en yüksek 50 canavarı sırala
+        enrichedMetaPlayers.sort((a, b) => b.potential - a.potential);
+        
+        res.json(enrichedMetaPlayers.slice(0, 50));
+
+    } catch (error) {
+        console.error("Hata:", error);
+        res.status(500).json({ success: false });
+    }
+});
+
 app.get('/api/user-status', (req, res) => {
     const users = getUsers();
     
@@ -221,29 +269,7 @@ app.get('/dashboard-sayfasi', (req, res) => res.sendFile(path.join(__dirname, 'v
 app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'views', 'settings.html')));
 app.get('/register-page', (req, res) => res.sendFile(path.join(__dirname, 'views', 'register.html')));
 
-app.get('/api/wonderkids', (req, res) => {
-    fs.readFile(playersPath, 'utf-8', (err, data) => {
-        if (err) return res.status(500).json([]);
-        try {
-            const allPlayers = JSON.parse(data);
-            const wonderkids = allPlayers.filter(p => {
-                const age = Number(p.age);
-                const rating = Number(p.rating);
-                return age <= 21 && rating >= 60; 
-            });
 
-            const enrichedWonderkids = wonderkids.map(p => ({
-                ...p,
-                potential: p.potential || (Number(p.rating) + (25 - Number(p.age)) * 2)
-            }));
-
-            enrichedWonderkids.sort((a, b) => b.potential - a.potential);
-            res.json(enrichedWonderkids.slice(0, 50));
-        } catch (e) {
-            res.status(500).json([]);
-        }
-    });
-});
 
 // Sunucuyu Başlatma (Hem Localhost hem de Vercel/Render için tam uyumlu ihracat)
 app.listen(PORT, () => console.log(`🚀 Sunucu http://localhost:${PORT} portunda canavar gibi çalışıyor!`));
