@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayarlar | FC SCOUT PRO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #022c22; color: white; }
+        .glass { background: rgba(5, 46, 38, 0.6); backdrop-filter: blur(12px); border: 1; border-color: rgba(16, 185, 129, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <nav class="border-b border-emerald-500/20 bg-emerald-900/30 p-4 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <a href="/dashboard-sayfasi" class="text-xl font-bold text-emerald-400 tracking-tighter italic">FC SCOUT <span class="text-white font-light text-sm">PRO</span></a>
+            <a href="/dashboard-sayfasi" class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest hover:text-white transition-all">← Dashboard'a Dön</a>
+        </div>
+    </nav>
+
+    <main class="max-w-3xl mx-auto mt-12 px-4 pb-20">
+        <header class="mb-10">
+            <h2 class="text-3xl font-extrabold tracking-tight">Hesap Ayarları</h2>
+            <p class="text-emerald-500/60 text-sm">Profilini ve uygulama tercihlerini buradan yönetebilirsin.</p>
+        </header>
+
+        <div class="glass rounded-3xl p-8 border border-emerald-500/10 mb-6">
+    <div class="flex items-center gap-6 mb-8">
+        <div id="profile-initial" class="w-20 h-20 rounded-2xl bg-emerald-500/20 flex items-center justify-center border-2 border-emerald-500/30 text-3xl font-black text-emerald-400">
+            -
+        </div>
+        <div>
+            <h3 id="display-name" class="text-xl font-bold">Yükleniyor...</h3>
+            <p class="text-xs text-emerald-500/50 uppercase font-black tracking-widest">Kıdemli Scout</p>
+        </div>
+    </div>
+
+    <form id="settings-form" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-emerald-500 uppercase ml-1">Kullanıcı Adı</label>
+                <input type="text" id="username-input" class="w-full bg-emerald-950/50 border border-emerald-500/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-all">
+                <p class="text-[9px] text-white/40 ml-1">Kalan Hak: <span id="user-limit" class="text-emerald-400">-/-</span></p>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-emerald-500 uppercase ml-1">Yeni Şifre</label>
+                <input type="password" id="password-input" placeholder="••••••••" class="w-full bg-emerald-950/50 border border-emerald-500/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-all">
+                <p class="text-[9px] text-white/40 ml-1">Kalan Hak: <span id="pass-limit" class="text-emerald-400">-/-</span></p>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-emerald-500 uppercase ml-1">Bölge</label>
+                <input type="text"  class="w-full bg-emerald-950/50 border border-emerald-500/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-all">
+            </div>
+        </div>
+
+        <div class="pt-4">
+            <button type="submit" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-2xl transition-all shadow-lg shadow-emerald-500/20">
+                Değişiklikleri Kaydet
+            </button>
+        </div>
+    </form>
+</div>
+
+        <div class="border border-red-500/20 bg-red-500/5 rounded-3xl p-6 flex justify-between items-center">
+            <div>
+                <h4 class="text-red-500 font-bold text-sm">Verileri Temizle</h4>
+                <p class="text-red-500/50 text-[10px]">Tüm yerel verilerini ve oturumunu kalıcı olarak siler.</p>
+            </div>
+            <button class="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-[10px] font-bold transition-all border border-red-500/20">
+                Sıfırla
+            </button>
+        </div>
+    </main>
+
+    <script>
+    // 0. API URL Tanımlaması (Lokale istek atmak için)
+    const API_URL = 'http://localhost:3000';
+
+    // 1. SAYFA YÜKLENDİĞİNDE VERİLERİ VE LİMİTLERİ ÇEK
+    window.addEventListener('DOMContentLoaded', async () => {
+        // Yerel isim güncelleme
+        const storedName = localStorage.getItem('loggedUser') || "Emir";
+        document.getElementById('display-name').innerText = storedName;
+        document.getElementById('username-input').value = storedName;
+        document.getElementById('profile-initial').innerText = storedName.charAt(0).toUpperCase();
+
+        await refreshLimits();
+    });
+
+    // Limitleri Sunucudan Çeken Fonksiyon
+    // Limitleri Sunucudan Çeken Fonksiyon
+    async function refreshLimits() {
+        try {
+            // 1. Tarayıcının hafızasından giriş yapmış kullanıcıyı alıyoruz
+            const loggedUser = localStorage.getItem('loggedUser');
+            
+            if (!loggedUser) {
+                console.error("Giriş yapmış kullanıcı bulunamadı.");
+                return;
+            }
+
+            // 2. İstek atarken sonuna ?username=KullaniciAdi ekliyoruz
+            const res = await fetch(`${API_URL}/api/user-status?username=${encodeURIComponent(loggedUser)}`);
+            const data = await res.json();
+
+            if (data.success && data.limits) {
+                const userRemaining = 2 - data.limits.username;
+                const passRemaining = 2 - data.limits.password;
+
+                document.getElementById('user-limit').innerText = `${userRemaining}/2`;
+                document.getElementById('pass-limit').innerText = `${passRemaining}/2`;
+
+                // --- BUTON KONTROLÜ ---
+                const submitBtn = document.querySelector('button[type="submit"]');
+                if (userRemaining <= 0 && passRemaining <= 0) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = "Güncelleme Limiti Doldu";
+                    submitBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-600');
+                    submitBtn.classList.remove('bg-emerald-500', 'hover:bg-emerald-400');
+                }
+            }
+        } catch (err) {
+            console.error("Limitler çekilemedi:", err);
+        }
+    }
+
+    // 2. KAYIT İŞLEMİ
+    document.getElementById('settings-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newUsername = document.getElementById('username-input').value;
+        const newPassword = document.getElementById('password-input').value;
+        
+        // ŞU ANKİ GİRİŞ YAPMIŞ KULLANICIYI HAFIZADAN ÇEKİYORUZ
+        const currentUsername = localStorage.getItem('loggedUser'); 
+
+        try {
+            const response = await fetch(`${API_URL}/api/update-settings`, {
+                method: 'POST', // Bunun POST olduğundan emin oluyoruz
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentUsername, newUsername, newPassword }) // Mevcut ismi de gönderdik!
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(data.message);
+                // Eğer kullanıcı adı değiştiyse hafızayı da güncelliyoruz
+                localStorage.setItem('loggedUser', newUsername);
+                
+                document.getElementById('display-name').innerText = newUsername;
+                document.getElementById('profile-initial').innerText = newUsername.charAt(0).toUpperCase();
+
+                await refreshLimits();
+            } else {
+                alert("Hata: " + data.error);
+            }
+        } catch (err) {
+            console.error("İstek hatası:", err);
+            alert("Sunucuyla bağlantı kurulamadı.");
+        }
+    });
+</script>
+</body>
+</html>

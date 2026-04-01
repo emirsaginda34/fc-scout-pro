@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <title>FC Scout - Kayıt Ol</title>
+</head>
+<body class="bg-emerald-950 min-h-screen flex flex-col">
+
+    <main class="flex-grow flex items-center justify-center p-4">
+        <div class="bg-emerald-900 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-500/20">
+            <h2 class="text-2xl font-bold text-emerald-400 mb-6 text-center">Yeni Scout Kaydı</h2>
+
+            <form onsubmit="handleRegister(event)" class="space-y-4">
+                
+                <div class="space-y-1">
+                    <label class="text-emerald-200 text-xs font-medium pl-1">Kullanıcı Adı</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-600 group-focus-within:text-emerald-400 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                            </svg>
+                        </div>
+                        <input type="text" id="username" name="username" autocomplete="username" class="w-full bg-emerald-800 border-none rounded-lg p-3.5 pl-11 text-white placeholder:text-emerald-700 focus:ring-2 focus:ring-emerald-500 outline-none transition" placeholder="Scout ismini gir..." required>
+                    </div>
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-emerald-200 text-xs font-medium pl-1">Şifre</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-600 group-focus-within:text-emerald-400 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                            </svg>
+                        </div>
+                        <input type="password" id="password" name="password" autocomplete="new-password" class="w-full bg-emerald-800 border-none rounded-lg p-3.5 pl-11 text-white placeholder:text-emerald-700 focus:ring-2 focus:ring-emerald-500 outline-none transition" placeholder="Gizli şifreni gir..." required>
+                    </div>
+                </div>
+
+                <button type="submit" id="login-btn" class="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-emerald-950 font-bold py-3 rounded-lg transition-all duration-200 shadow-lg shadow-emerald-500/20 mt-2 flex items-center justify-center gap-2 cursor-pointer">
+                    <svg id="spinner" class="hidden animate-spin h-5 w-5 text-emerald-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="btn-text">Hesabımı Oluştur</span>
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center border-t border-emerald-800 pt-4">
+                <p class="text-emerald-200/50 text-sm">Zaten üye misin?</p>
+                <a href="/" class="inline-block mt-2 text-emerald-400 hover:text-emerald-300 font-semibold transition-colors underline-offset-4 hover:underline">Giriş Ekranına Dön</a>
+            </div>
+        </div>
+    </main>
+
+    <div id="errorModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] items-center justify-center p-4">
+        <div class="bg-emerald-950 border border-emerald-500/30 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+            <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <p id="errorText" class="text-emerald-100 mb-6 font-medium"></p>
+            <button onclick="closeErrorModal()" class="w-full py-3 bg-emerald-500 text-emerald-950 font-bold rounded-xl hover:bg-emerald-400 transition-all cursor-pointer">
+                ANLADIM
+            </button>
+        </div>
+    </div>
+
+    <footer class="bg-emerald-950/80 text-emerald-200/40 font-medium py-6 px-4 text-center text-[10px] border-t border-emerald-900">
+        <div class="max-w-4xl mx-auto leading-relaxed">
+            All product names, logos, and brands are the property of their respective owners.<br>
+            All company, product, and service names used in this website are for identification purposes only.
+        </div>
+    </footer>
+
+    <script>
+        const loginBtn = document.getElementById('login-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('spinner');
+
+        async function handleRegister(event) {
+            event.preventDefault(); // Sayfanın yenilenmesini durdurur
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // 1. Şifre Uzunluk Kontrolü (Client-side)
+            if (password.length < 6) {
+                showError("Şifre en az 6 karakter olmalıdır!");
+                return;
+            }
+
+            // 2. Loading Durumunu Başlat
+            loginBtn.disabled = true;
+            loginBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            btnText.innerText = "Hesabınız Oluşturuluyor...";
+            spinner.classList.remove('hidden');
+
+            try {
+                // 3. Backend'e İstek At
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Başarılı: Giriş sayfasına yönlendir
+                    window.location.href = '/?msg=kayit-basarili';
+                } else {
+                    // Hata: Backend'den gelen mesajı (örn: "Alınmış!") modalda göster
+                    showError(result.error);
+                    resetButton();
+                }
+            } catch (err) {
+                showError("Sunucu bağlantısı kurulamadı. Lütfen tekrar deneyin.");
+                resetButton();
+            }
+        }
+
+        function resetButton() {
+            loginBtn.disabled = false;
+            loginBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            btnText.innerText = "Hesabımı Oluştur";
+            spinner.classList.add('hidden');
+        }
+
+        function showError(msg) {
+            const modal = document.getElementById('errorModal');
+            document.getElementById('errorText').innerText = msg;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex'); // Hidden'dan Flex'e geçerek gösterir
+        }
+
+        function closeErrorModal() {
+            const modal = document.getElementById('errorModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Geri tuşu kontrolü (Sayfa önbellekten gelirse temizle)
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                resetButton();
+            }
+        });
+    </script>
+</body>
+</html>

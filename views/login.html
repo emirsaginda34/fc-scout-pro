@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EA FC Scout - Giriş</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-[#050a0a] min-h-screen flex flex-col font-sans">
+    <div id="landing-page" class="min-h-screen w-full text-white relative flex flex-col">
+        
+        <div class="absolute top-0 -left-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+        <div class="absolute bottom-0 -right-20 w-96 h-96 bg-emerald-900/20 rounded-full blur-[120px] pointer-events-none"></div>
+
+        <nav class="container mx-auto px-6 py-8 flex justify-between items-center relative z-20">
+            <div class="text-2xl font-black tracking-tighter text-emerald-500">SCOUT<span class="text-white">PRO</span></div>
+            <div class="hidden md:flex gap-6 text-[10px] font-bold tracking-[0.2em] text-emerald-500/50 uppercase">
+                <span>Database: FC 26</span>
+                <span>Region: TR</span>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-6 flex-grow flex flex-col md:flex-row items-center justify-center gap-12 lg:gap-20 relative z-10 pb-12">
+            
+            <div class="w-full md:w-1/2 text-center md:text-left space-y-8">
+                <div class="space-y-4">
+                    <span class="px-4 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-bold tracking-[0.2em] uppercase border border-emerald-500/20 shadow-sm">FC 26 Veri Tabanı Aktif</span>
+                    
+                    <h1 class="text-5xl lg:text-7xl font-black leading-tight">
+                        Geleceğin <br> Yıldızlarını <br> <span class="text-emerald-500">Bugünden Keşfet</span>
+                    </h1>
+                    
+                    <p class="text-zinc-400 max-w-md text-lg font-medium leading-relaxed">
+                        17.500'den fazla oyuncunun detaylı istatistikleri ve gelişmiş filtreleme seçenekleriyle profesyonel bir gözlemci deneyimi yaşayın.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-2xl hover:border-emerald-500/20 transition-colors">
+                        <div class="text-2xl font-black text-white">17.5K+</div>
+                        <div class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Oyuncu</div>
+                    </div>
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-2xl hover:border-emerald-500/20 transition-colors">
+                        <div class="text-2xl font-black text-white">6+</div>
+                        <div class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Metrik</div>
+                    </div>
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-2xl hover:border-emerald-500/20 transition-colors">
+                        <div class="text-2xl font-black text-white">FC 26</div>
+                        <div class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Güncel Veri</div>
+                    </div>
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-2xl hover:border-emerald-500/20 transition-colors">
+                        <div class="text-2xl font-black text-white">TR</div>
+                        <div class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest mt-1">Yerel Hizmet</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="login-section" class="w-full max-w-md">
+                <div class="bg-emerald-900 p-8 rounded-[2.5rem] shadow-2xl border border-emerald-500/20 backdrop-blur-sm relative group">
+                    <div class="absolute -inset-1 bg-emerald-500/20 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition-all duration-500 pointer-events-none"></div>
+                    
+                    <div class="relative">
+                        <h2 class="text-2xl font-bold text-emerald-400 mb-6 text-center uppercase tracking-tighter">Scout Girişi</h2>
+
+                        <form action="/login" method="POST" class="space-y-4">
+                            <div id="error-box" class="hidden mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 text-sm items-center gap-3 shadow-lg shadow-red-900/20 backdrop-blur-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 shrink-0 text-red-500">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                                <span id="error-message" class="font-medium text-center w-full"></span>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label class="text-emerald-200 text-[10px] font-black uppercase tracking-[0.2em] pl-1">Kullanıcı Adı</label>
+                                <div class="relative group/input">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-600 group-focus-within/input:text-emerald-400 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                                        </svg>
+                                    </div>
+                                    <input type="text" name="username" class="w-full bg-emerald-950/50 border-none rounded-xl p-4 pl-11 text-white placeholder:text-emerald-800 focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-inner" placeholder="Scout ismi..." required>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-1">
+                                <label class="text-emerald-200 text-[10px] font-black uppercase tracking-[0.2em] pl-1">Şifre</label>
+                                <div class="relative group/input">
+                                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-600 group-focus-within/input:text-emerald-400 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                        </svg>
+                                    </div>
+                                    <input type="password" name="password" class="w-full bg-emerald-950/50 border-none rounded-xl p-4 pl-11 text-white placeholder:text-emerald-800 focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-inner" placeholder="Şifre..." required>
+                                </div>
+                            </div>
+
+                            <button type="submit" id="login-btn" class="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-emerald-950 font-black py-4 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/20 mt-4 flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                                <svg id="spinner" class="hidden animate-spin h-5 w-5 text-emerald-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span id="btn-text">Sisteme Eriş</span>
+                            </button>
+                        </form>
+                        
+                        <div class="mt-6 text-center border-t border-emerald-800/50 pt-4">
+                            <p class="text-emerald-200/50 text-[10px] uppercase font-bold tracking-widest">Hesabın yok mu?</p>
+                            <a href="/register-page" class="inline-block mt-2 text-emerald-400 hover:text-emerald-300 font-bold transition-colors underline-offset-4 hover:underline text-sm uppercase">Hemen Kayıt Ol</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+
+    <footer class="bg-emerald-950/80 text-emerald-200/40 font-medium py-6 px-4 text-center text-[10px] border-t border-emerald-900">
+        <div class="max-w-4xl mx-auto leading-relaxed">
+            All product names, logos, and brands are the property of their respective owners.<br>
+            All company, product, and service names used in this website are for identification purposes only.
+        </div>
+    </footer>
+  
+    <script>
+        function scrollToLogin(){
+            document.getElementById('login-section').scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('loggedUser')) {
+        // Eğer giriş yapmışsa direkt ana dashboard'a yönlendir 
+        // veya landing sayfasını gizle:
+        document.getElementById('landing-page').style.display = 'none';
+        document.getElementById('login-section').style.display = 'none';
+        // Dashboard kısmını göster...
+    }
+});
+        if (localStorage.getItem('loggedUser')) {
+            window.location.href = "/dashboard-sayfasi";
+        }
+        const loginForm = document.querySelector('form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorBox = document.getElementById('error-box');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('spinner');
+
+       loginForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Loading başlat
+    loginBtn.disabled = true;
+    btnText.innerText = "Kontrol Ediliyor...";
+    spinner.classList.remove('hidden');
+    errorBox.classList.add('hidden');
+    errorBox.classList.remove('flex'); // Eski hatayı tamamen temizle
+
+    // Veriyi JSON objesine çeviriyoruz (Kritik nokta)
+    const formData = new FormData(loginForm);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json' // Sunucuya "Sana JSON gönderiyorum" diyoruz
+            },
+            body: JSON.stringify(data) // Objemizi yazıya (string) çevirip yolluyoruz
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            // result.user.name ve result.user.role senin server.js'deki yeni yapına uygun
+            localStorage.setItem('loggedUser', result.user.name);
+            localStorage.setItem('userRole', result.user.role);
+            window.location.href = result.redirect;
+        } else {
+            // Backend'den gelen hata mesajını (result.error veya result.message) göster
+            showError(result.error || result.message || "Giriş başarısız!");
+        }
+    } catch (err) {
+        console.error("Hata detayı:", err);
+        showError("Sunucuya bağlanılamadı!");
+    } finally {
+        loginBtn.disabled = false;
+        btnText.innerText = "Sisteme Gir";
+        spinner.classList.add('hidden');
+    }
+});
+
+    function showError(msg) {
+        errorBox.innerText = msg;
+        errorBox.classList.remove('hidden');
+        // Sallanma animasyonu ekleyelim (Elegans bir dokunuş)
+        errorBox.classList.add('animate-bounce'); 
+        setTimeout(() => errorBox.classList.remove('animate-bounce'), 1000);
+    }
+    function showError(msg) {
+    const errorMsgSpan = document.getElementById('error-message');
+    errorMsgSpan.innerText = msg;
+    
+    // Hatayı gösterirken hem gizliliği kaldırıyoruz hem de görünüm tipini seçiyoruz
+    errorBox.classList.remove('hidden');
+    errorBox.classList.add('flex'); // <--- Dinamik olarak burada ekle!
+    
+    errorBox.classList.add('animate-bounce'); 
+    setTimeout(() => errorBox.classList.remove('animate-bounce'), 1000);
+}
+    </script>
+</body>
+</html>

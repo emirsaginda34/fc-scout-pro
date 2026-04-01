@@ -1,0 +1,11 @@
+[
+  {
+    "username": "EMRUZOR13",
+    "password": "$2b$10$.4Ng1DUYHxy/N5G5J4eh2Ocrc3uhXU23uvpdGdnEFp7ZUMtFtwVq.",
+    "role": "user",
+    "updateLimits": {
+      "username": 1,
+      "password": 0
+    }
+  }
+]
