@@ -7,9 +7,7 @@ mongoose.connect(mongoURI)
     .then(() => console.log("🚀 Veritabanına güvenli şekilde bağlandık!"))
     .catch(err => console.error("❌ Bağlantı hatası:", err));
 
-mongoose.connect(mongoURI)
-    .then(() => console.log("🚀 Veri aktarımı için MongoDB'ye bağlandık!"))
-    .catch(err => console.error("❌ Bağlantı hatası:", err));
+
 
 // 2. MongoDB Şeması (Schema) Tanımlama
 // Oyuncu verilerinin hangi yapıda kaydedileceğini belirtiyoruz.

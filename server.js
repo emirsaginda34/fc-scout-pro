@@ -108,13 +108,15 @@ app.post('/login', (req, res) => {
     }
 });
 
-app.get('/api/players', async (req, res) => {
+app.get('/api/players', async (req, res)=> {
     try {
-        const players = await Player.find({});
-        res.json(players);
-    } catch (error) {
+        const players = await Player.find({})
+                             .sort({ rating: -1})
+                             .limit(50);
+    res.json(players);
+    } catch (error){
         console.error("Veri çekme hatası:", error);
-        res.status(500).json({ message: "Sunucu hatası oluştu." });
+        res.status(500).json({message: "Sunucu hatası oluştu."});
     }
 });
 
