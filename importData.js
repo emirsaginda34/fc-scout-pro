@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 
 // 1. Veritabanı Bağlantısı
-const mongoURI = "mongodb+srv://emirsaginda1:mV4ZJuT9jrGMSbF96@emir.jqfbr2h.mongodb.net/fc_scout?retryWrites=true&w=majority&appName=emir";
+const mongoURI = process.env.MONGO_URI;
+mongoose.connect(mongoURI)
+    .then(() => console.log("🚀 Veritabanına güvenli şekilde bağlandık!"))
+    .catch(err => console.error("❌ Bağlantı hatası:", err));
 
 mongoose.connect(mongoURI)
     .then(() => console.log("🚀 Veri aktarımı için MongoDB'ye bağlandık!"))

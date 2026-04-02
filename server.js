@@ -11,6 +11,9 @@ const mongoose = require('mongoose');
 
 // 1. Veritabanı Bağlantısı ve Port Ayarı
 const mongoURI = process.env.MONGO_URI;
+mongoose.connect(mongoURI)
+    .then(() => console.log("🚀 Veritabanına güvenli şekilde bağlandık!"))
+    .catch(err => console.error("❌ Bağlantı hatası:", err));
 const PORT = process.env.PORT || 3000;
 
 if (!mongoURI) {
