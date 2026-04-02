@@ -1,6 +1,6 @@
 # ⚡ FC SCOUT PRO | The Meta Database
 
-![FC 25 Card](https://ratings-images-prod.pulse.ea.com/FC25/full/player-portraits/p235212.png?padding=0.7)
+
 
 > **"Don't play the game, break the game."**
 > 17.500+ oyuncu arasından sıradan kartları değil, mevkisinin en canavarlarını (Meta) bulman için tasarlandı.
