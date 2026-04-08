@@ -262,412 +262,280 @@
         </div>
     </footer>
     
-   <script>
-    // --- 1. GLOBAL DEĞİŞKENLER ---
-    let allPlayers = [];
-    let bookmarks = JSON.parse(localStorage.getItem('scout_bookmarks')) || [];
-    let currentPage = 1;
-    const playersPerPage = 12;
-    let searchTimeout; 
-    let currentSortDir = 'desc';
+    <script>
+  let allPlayers = [];
+let bookmarks = JSON.parse(localStorage.getItem('scout_bookmarks')) || [];
+const playersPerPage = 12;
 
-    let currentUser = {
-        name: localStorage.getItem('loggedUser') || "Bilinmiyor",
-        role: localStorage.getItem('userRole') || "user"
-    };
+// Hatanın çözümü olan satırlar burası:
+let currentPage = 1;
+let currentTier = 'all';
+let currentPos = 'all';
+let currentSort = 'rating'; // "ReferenceError: currentSort is not defined" hatasını bu çözer
+let currentSortDir = 'desc';
+let currentUser = {
+    name: localStorage.getItem('loggedUser') || "Bilinmiyor",
+    role: localStorage.getItem('userRole') || "user"
+};
 
-    // --- 2. GÜVENLİK ---
-    if (!localStorage.getItem('loggedUser')) {
-        alert("Bu sayfayı görmek için giriş yapmalısınız");
-        window.location.href = "/";
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        init(); 
-        updateNavUI(); 
-    });
-    function showSkeleton() {
-    const grid = document.getElementById('player-grid');
-    const skeletonHTML = `
-        <div class="bg-emerald-900/10 border border-emerald-500/5 rounded-3xl p-6 h-64 animate-pulse-emerald">
-            <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl mb-4"></div>
-            <div class="h-6 bg-emerald-500/10 rounded-lg w-3/4 mb-3"></div>
-            <div class="h-4 bg-emerald-500/10 rounded-lg w-1/2"></div>
-            <div class="mt-8 flex gap-2">
-                <div class="h-8 w-full bg-emerald-500/5 rounded-xl"></div>
-                <div class="h-8 w-full bg-emerald-500/5 rounded-xl"></div>
-            </div>
-        </div>
-    `;
-    // 8 tane skeleton kartı göster
-    grid.innerHTML = skeletonHTML.repeat(8);
+// --- 2. GÜVENLİK ---
+if (!localStorage.getItem('loggedUser')) {
+    alert("Bu sayfayı görmek için giriş yapmalısınız");
+    window.location.href = "/";
 }
 
-    function updateNavUI() {
-        const nameElement = document.getElementById('nav-username');
-        if (nameElement) {
-            nameElement.innerText = currentUser.name.toUpperCase();
-        }
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    loadPlayers(1); // Sayfa açılır açılmaz ilk sayfayı çek
+    updateNavUI(); 
+});
 
-    // --- 3. YARDIMCI FONKSİYONLAR ---
-    function renderStat(label, value) {
-        return `
-            <div class="space-y-1">
-                <div class="flex justify-between text-[9px] font-black text-emerald-600 tracking-widest">
-                    <span>${label}</span><span>${value}</span>
-                </div>
-                <div class="h-1 w-full bg-emerald-950 rounded-full overflow-hidden">
-                    <div class="h-full bg-emerald-500" style="width: ${value}%"></div>
-                </div>
-            </div>`;
+function updateNavUI() {
+    const nameElement = document.getElementById('nav-username');
+    if (nameElement) {
+        nameElement.innerText = currentUser.name.toUpperCase();
     }
+}
 
-    function updateStats(players) {
-        const total = players.length;
-        const avg = total > 0 ? (players.reduce((sum, p) => sum + (Number(p.rating) || 0), 0) / total).toFixed(1) : 0;
-        const maxPace = total > 0 ? Math.max(...players.map(p => Number(p.pace) || 0)) : 0;
-        
-        if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = total;
-        if(document.getElementById('stat-avg')) document.getElementById('stat-avg').innerText = avg;
-        if(document.getElementById('stat-pace')) document.getElementById('stat-pace').innerText = maxPace;
-    }
-      
-    async function fetchWonderkids() {
-    // Senin HTML'indeki gerçek ID 'player-grid'
-    const grid = document.getElementById('player-grid');
+// --- 3. YARDIMCI FONKSİYONLAR ---
+function renderStat(label, value) {
+    return `
+        <div class="space-y-1">
+            <div class="flex justify-between text-[9px] font-black text-emerald-600 tracking-widest">
+                <span>${label}</span><span>${value || 50}</span>
+            </div>
+            <div class="h-1 w-full bg-emerald-950 rounded-full overflow-hidden">
+                <div class="h-full bg-emerald-500" style="width: ${value || 50}%"></div>
+            </div>
+        </div>`;
+}
+
+function updateStats(players, totalCount = null) {
+    // Backend'den 17500 geldiyse onu kullan, yoksa o anki listenin uzunluğunu al
+    const total = totalCount !== null ? totalCount : players.length;
+    const avg = players.length > 0 ? (players.reduce((sum, p) => sum + (Number(p.rating) || 0), 0) / players.length).toFixed(1) : 0;
+    const maxPace = players.length > 0 ? Math.max(...players.map(p => Number(p.pace) || 0)) : 0;
     
-    if (!grid) {
-        console.error("Hata: 'player-grid' div'i bulunamadı!");
+    if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = total.toLocaleString('tr-TR');
+    if(document.getElementById('stat-avg')) document.getElementById('stat-avg').innerText = avg;
+    if(document.getElementById('stat-pace')) document.getElementById('stat-pace').innerText = maxPace;
+}
+
+async function loadPlayers(page = 1) {
+    try {
+        const grid = document.getElementById('player-grid');
+        if (grid) {
+            grid.innerHTML = '<div class="col-span-full text-center py-20 text-emerald-500 font-bold animate-pulse">Oyuncular yükleniyor...</div>';
+        }
+
+        // Backend'e sayfa, limit, filtre ve sıralama bilgilerini tek seferde gönderiyoruz
+        let url = `http://localhost:3000/api/players?page=${page}&limit=${playersPerPage}&sort=${currentSort}&order=${currentSortDir}`;
+        
+        if (currentTier !== 'all') url += `&tier=${currentTier}`;
+        if (currentPos !== 'all') url += `&pos=${currentPos}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        allPlayers = data.players; 
+        
+        // Kartları bas
+        displayPlayers(data.players, data.totalPlayers);
+
+        // Sayfalamayı oluştur
+        renderPaginationButtons(data.totalPlayers, playersPerPage, page, data.players);
+
+    } catch (error) {
+        console.error("Oyuncular yüklenirken hata oluştu:", error);
+    }
+}
+
+function displayPlayers(players, totalCount = null) {
+    const currentList = players || allPlayers;
+    updateStats(currentList, totalCount);
+    
+    const grid = document.getElementById('player-grid');
+    if (!grid) return;
+
+    if (currentList.length === 0) {
+        grid.innerHTML = '<p class="col-span-full text-center py-20 text-emerald-500 italic">Bulunamadı...</p>';
+        const paginationContainer = document.getElementById('pagination-numbers');
+        if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
 
-    // Yükleniyor efekti (Skeleton benzeri)
-    grid.innerHTML = `
-        <div class="col-span-full py-20 text-center">
-            <div class="animate-spin inline-block w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full mb-4"></div>
-            <p class="text-amber-500 font-black tracking-[0.2em] animate-pulse uppercase">Yarının Yıldızları Analiz Ediliyor...</p>
-        </div>
-    `;
-
-    try {
-        // Backend rotasına istek at
-        const response = await fetch('/api/wonderkids');
-        const players = await response.json();
-
-        if (!players || players.length === 0) {
-            grid.innerHTML = '<p class="col-span-full text-center py-20 text-emerald-500 italic uppercase tracking-widest">Kriterlere uygun elmas bulunamadı...</p>';
-            return;
-        }
-
-        // Senin kodundaki asıl listeleme fonksiyonu: displayPlayers
-        // 17.500 oyuncuyu basan fonksiyonun bu olduğunu görüyorum.
-        if (typeof displayPlayers === 'function') {
-            // Wonderkidleri listelemeden önce sayfayı 1 yapalım
-            currentPage = 1; 
-            displayPlayers(players);
+    grid.innerHTML = currentList.map(p => {
+        const rating = Number(p.rating);
+        const isFav = bookmarks.includes(p.id || p.name);
+        
+        let cardColor, textColor, borderColor;
+        if (rating >= 80) {
+            cardColor = "bg-gradient-to-br from-yellow-600/20 to-yellow-900/40";
+            borderColor = "border-yellow-500/50";
+            textColor = "text-yellow-400";
+        } else if (rating >= 70) {
+            cardColor = "bg-gradient-to-br from-slate-300/10 to-slate-500/30";
+            borderColor = "border-slate-400/40";
+            textColor = "text-slate-300";
+        } else if (rating >= 60) {
+            cardColor = "bg-gradient-to-br from-orange-800/20 to-orange-900/40";
+            borderColor = "border-orange-700/40";
+            textColor = "text-orange-600";
         } else {
-            console.error("displayPlayers fonksiyonu bulunamadı!");
-        }
-        
-        // Başlığı güncelle
-        const title = document.querySelector('h2'); // Sayfadaki 'Potansiyel Yıldızlar' başlığı
-        if (title) {
-            title.innerHTML = '<span class="text-amber-500 italic">⭐ ELITE PROSPECTS</span> <span class="text-white/20 text-sm font-light uppercase ml-2">FC 26</span>';
+            cardColor = "bg-gradient-to-br from-zinc-700/20 to-zinc-800/40";
+            borderColor = "border-zinc-600/30";
+            textColor = "text-zinc-500";
         }
 
-    } catch (error) {
-        console.error("Wonderkid fetch hatası:", error);
-        grid.innerHTML = '<p class="text-red-500 text-center col-span-full">Veri çekilirken bir sorun oluştu!</p>';
-    }
-}
-    // --- 4. OYUNCU LİSTELEME ---
-    function displayPlayers(players) {
-        const currentList = players || allPlayers;
-        updateStats(currentList);
+        const initials = p.name.split(' ').map(n => n[0]).join('').toUpperCase();
         
-        
-        const grid = document.getElementById('player-grid');
-        if (!grid) return;
+        return `
+            <div class="${cardColor} border ${borderColor} p-6 rounded-3xl hover:scale-[1.02] transition-all shadow-xl relative overflow-hidden group h-full flex flex-col justify-between">
+                
+                <div class="flex justify-between items-center mb-4 relative z-10">
+                    <button onclick="toggleBookmark('${p.id || p.name}')" 
+                            class="p-2.5 rounded-xl bg-emerald-950/60 backdrop-blur-md border border-emerald-500/10 transition-all cursor-pointer hover:scale-110 
+                            ${isFav ? 'text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'text-emerald-500 hover:text-emerald-400'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="${isFav ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                    </button>
 
-        if (currentList.length === 0) {
-            grid.innerHTML = '<p class="col-span-full text-center py-20 text-emerald-500 italic">Bulunamadı...</p>';
-            const paginationContainer = document.getElementById('pagination-numbers');
-            if (paginationContainer) paginationContainer.innerHTML = '';
-            return;
-        }
-
-        const startIndex = (currentPage - 1) * playersPerPage;
-        const endIndex = startIndex + playersPerPage;
-        const paginatedPlayers = currentList.slice(startIndex, endIndex);
-
-        grid.innerHTML = paginatedPlayers.map(p => {
-    const rating = Number(p.rating);
-    // Favori kontrolü: id varsa id, yoksa isim üzerinden kontrol eder
-    const isFav = bookmarks.includes(p.id || p.name);
-    
-    let cardColor, textColor, borderColor;
-
-    if (rating >= 80) {
-        cardColor = "bg-gradient-to-br from-yellow-600/20 to-yellow-900/40";
-        borderColor = "border-yellow-500/50";
-        textColor = "text-yellow-400";
-    } else if (rating >= 70) {
-        cardColor = "bg-gradient-to-br from-slate-300/10 to-slate-500/30";
-        borderColor = "border-slate-400/40";
-        textColor = "text-slate-300";
-    } else if (rating >= 60) {
-        cardColor = "bg-gradient-to-br from-orange-800/20 to-orange-900/40";
-        borderColor = "border-orange-700/40";
-        textColor = "text-orange-600";
-    } else {
-        cardColor = "bg-gradient-to-br from-zinc-700/20 to-zinc-800/40";
-        borderColor = "border-zinc-600/30";
-        textColor = "text-zinc-500";
-    }
-
-    const initials = p.name.split(' ').map(n => n[0]).join('').toUpperCase();
-    
-    return `
-<div class="${cardColor} border ${borderColor} p-6 rounded-3xl hover:scale-[1.02] transition-all shadow-xl relative overflow-hidden group h-full flex flex-col justify-between">
-    
-    <div class="flex justify-between items-center mb-6 relative z-10">
-        
-        <button onclick="toggleBookmark('${p.id || p.name}')" 
-                class="p-2.5 rounded-xl bg-emerald-950/60 backdrop-blur-md border border-emerald-500/10 transition-all cursor-pointer hover:scale-110 
-                ${isFav ? 'text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'text-emerald-500 hover:text-emerald-400'}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="${isFav ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-        </button>
-
-        <div class="text-right flex flex-col items-end">
-            <div class="flex items-center gap-1.5">
-                <span class="text-3xl font-black ${textColor} italic leading-none">${p.rating}</span>
-                <p class="text-[9px] text-emerald-500/70 font-bold uppercase tracking-widest leading-none">OVR</p>
-            </div>
-            <div class="w-10 h-1 border-t-2 ${borderColor} mt-2 rounded-full"></div> </div>
-    </div>
-
-    <div class="absolute -inset-full h-full w-1/2 z-0 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/5 opacity-40 group-hover:animate-shine"></div>
-    
-    <div class="flex flex-col gap-3 relative z-10">
-        
-        <div class="flex justify-between items-center gap-3">
-             <div class="w-16 h-16 rounded-xl bg-emerald-950/50 flex items-center justify-center border-2 ${borderColor}">
-                <span class="text-2xl font-black ${textColor}">${initials}</span>
-            </div>
-            <div class="text-center mt-2">
-              <h3 class="text-lg font-bold text-white truncate leading-tight">${p.name}</h3>
-             <p class="opacity-70 text-[10px] font-bold uppercase truncate">${p.team} | ${p.pos}</p>
-            </div>
-        </div>
-        
-        <div class="space-y-3 mt-1">
-            ${renderStat("PACE", p.pace)}
-            ${renderStat("SHOOT", p.shoot)}
-            ${renderStat("PASS", p.pass)}
-        </div>
-
-        <div class="mt-4 flex gap-2">
-            <button onclick="openModal('${p.name}', '${textColor.replace('text-', '')}')" 
-                    class="flex-grow py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-[10px] transition-all uppercase border border-white/5 cursor-pointer">
-                Raporu Görüntüle
-            </button>
-            
-            ${currentUser.role === 'admin' ? `
-            <button onclick="deletePlayer('${encodeURIComponent(p.name)}')" 
-                    class="px-4 py-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all cursor-pointer border border-red-500/10 shadow-lg group/del">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-            </button>` : ''}
-        </div>
-    </div>
-</div>`;
-}).join('');
-  // 1. Wonderkids Verisini Çeken Fonksiyon
-async function loadWonderkids() {
-    try {
-        // 1. Senin asıl kart alanını seçiyoruz
-        const playerGrid = document.getElementById('player-grid'); 
-        
-        if (!playerGrid) {
-            console.error("player-grid bulunamadı!");
-            return;
-        }
-
-        // Yükleniyor efekti verelim
-        playerGrid.innerHTML = '<div class="col-span-full text-center py-10 text-emerald-500 font-bold animate-pulse">Meta oyuncular taranıyor...</div>';
-
-        // 2. Backend'e istek atıyoruz
-        const response = await fetch(`http://localhost:3000/api/wonderkids`);
-        const wonderkids = await response.json();
-
-        // Alanı temizle
-        playerGrid.innerHTML = '';
-
-        if (wonderkids.length === 0) {
-            playerGrid.innerHTML = '<div class="col-span-full text-center py-10 text-red-400 font-bold">Kriterlere uygun genç yetenek bulunamadı.</div>';
-            return;
-        }
-
-        // 3. Her bir Wonderkid için senin tasarımına uygun KART oluşturuyoruz
-       wonderkids.forEach(player => {
-            const metaScore = Math.round(player.potential); // Backend'den gelen puan
-            
-            const card = `
-                <div class="bg-emerald-900/20 border border-emerald-500/10 rounded-2xl p-5 hover:border-emerald-500/30 transition-all duration-300 backdrop-blur-sm relative group overflow-hidden">
-                    
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-white font-bold text-lg tracking-tight">${player.name}</h3>
-                            <p class="text-emerald-500/70 text-xs font-bold uppercase">${player.team || 'Bilinmiyor'}</p>
+                    <div class="text-right flex flex-col items-end">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-3xl font-black ${textColor} italic leading-none">${p.rating}</span>
+                            <p class="text-[9px] text-emerald-500/70 font-bold uppercase tracking-widest leading-none">OVR</p>
                         </div>
-                        <span class="text-xs bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded-lg font-bold">🔥 META</span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <div class="bg-emerald-950/50 p-3 rounded-xl text-center">
-                            <p class="text-[10px] text-emerald-500/50 font-black uppercase">OVR</p>
-                            <p class="text-2xl font-black text-white">${player.rating}</p>
-                        </div>
-                        <div class="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-center">
-                            <p class="text-[10px] text-emerald-400 font-black uppercase">Güç Puanı</p>
-                            <p class="text-2xl font-black text-emerald-400">⚡ ${metaScore}</p>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between items-center text-xs text-emerald-500/70 font-bold">
-                        <span>ULKE: <span class="text-white">${player.nation || 'N/A'}</span></span>
-                        <span>MEVKİ: <span class="text-emerald-400">${player.pos || 'N/A'}</span></span>
                     </div>
                 </div>
-            `;
-            playerGrid.insertAdjacentHTML('beforeend', card);
-        });
 
-    } catch (error) {
-        console.error("Wonderkids yükleme hatası:", error);
-        alert("Genç yetenekler yüklenirken bir hata oluştu.");
-    }
+                <div class="absolute -inset-full h-full w-1/2 z-0 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/5 opacity-40 group-hover:animate-shine"></div>
+                
+                <div class="flex flex-col gap-3 relative z-10">
+                    <div class="flex justify-between items-center gap-3">
+                         <div class="w-14 h-14 rounded-xl bg-emerald-950/50 flex items-center justify-center border-2 ${borderColor}">
+                            <span class="text-xl font-black ${textColor}">${initials}</span>
+                        </div>
+                        <div class="text-center mt-2 flex-1">
+                          <h3 class="text-base font-bold text-white truncate leading-tight">${p.name}</h3>
+                          <p class="opacity-70 text-[9px] font-bold uppercase truncate">${p.team} | ${p.pos}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2 flex gap-2">
+                        <button onclick="openModal('${p.name}', '${textColor.replace('text-', '')}')" 
+                                class="flex-grow py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-[10px] transition-all uppercase border border-white/5 cursor-pointer">
+                            Raporu Görüntüle
+                        </button>
+                        
+                        ${currentUser.role === 'admin' ? `
+                        <button onclick="deletePlayer('${encodeURIComponent(p.name)}')" 
+                                class="px-3 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all cursor-pointer border border-red-500/10 shadow-lg group/del">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
 }
 
-// 2. Butona Tıklama Olayını Bağlama
-document.getElementById('wonderkids-btn').addEventListener('click', loadWonderkids);
-        
+// --- 5. SAYFALAMA SİSTEMİ ---
+function renderPaginationButtons(totalPlayers, playersPerPage, activePage, currentList) {
+    const totalPages = Math.ceil(totalPlayers / playersPerPage);
+    const container = document.getElementById('pagination-numbers');
+    if (!container) return;
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
 
-        renderPaginationButtons(currentList.length, playersPerPage, currentPage, currentList);
+    addArrowBtn('prev', container, activePage, totalPages, currentList);
+
+    if (activePage > 2) addPageBtn(1, container, activePage, currentList);
+    if (activePage > 3) {
+        const dots = document.createElement('span');
+        dots.className = "text-emerald-500/30 font-bold px-1";
+        dots.innerText = "...";
+        container.appendChild(dots);
     }
 
-    // --- 5. SAYFALAMA SİSTEMİ ---
-    function renderPaginationButtons(totalPlayers, playersPerPage, activePage, currentList) {
-        const totalPages = Math.ceil(totalPlayers / playersPerPage);
-        const container = document.getElementById('pagination-numbers');
-        if (!container) return;
-        container.innerHTML = '';
-        if (totalPages <= 1) return;
+    let start = Math.max(1, activePage - 1);
+    let end = Math.min(totalPages, activePage + 1);
 
-        addArrowBtn('prev', container, activePage, totalPages, currentList);
-
-        if (activePage > 2) addPageBtn(1, container, activePage, currentList);
-        if (activePage > 3) {
-            const dots = document.createElement('span');
-            dots.className = "text-emerald-500/30 font-bold px-1";
-            dots.innerText = "...";
-            container.appendChild(dots);
-        }
-
-        let start = Math.max(1, activePage - 1);
-        let end = Math.min(totalPages, activePage + 1);
-
-        for (let i = start; i <= end; i++) {
-            addPageBtn(i, container, activePage, currentList);
-        }
-
-        if (activePage < totalPages - 2) {
-            const dots = document.createElement('span');
-            dots.className = "text-emerald-500/30 font-bold px-1";
-            dots.innerText = "...";
-            container.appendChild(dots);
-        }
-        if (activePage < totalPages - 1) addPageBtn(totalPages, container, activePage, currentList);
-
-        addArrowBtn('next', container, activePage, totalPages, currentList);
+    for (let i = start; i <= end; i++) {
+        addPageBtn(i, container, activePage, currentList);
     }
 
-    function addPageBtn(page, container, activePage, currentList) {
-        const btn = document.createElement('button');
-        btn.innerText = page;
-        btn.className = `w-10 h-10 rounded-xl font-bold transition-all cursor-pointer ${
-            page === activePage ? 'bg-emerald-500 text-emerald-950 shadow-lg' : 'bg-emerald-900/40 text-emerald-500 hover:bg-emerald-800'
-        }`;
-        btn.onclick = () => { currentPage = page; displayPlayers(currentList); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-        container.appendChild(btn);
+    if (activePage < totalPages - 2) {
+        const dots = document.createElement('span');
+        dots.className = "text-emerald-500/30 font-bold px-1";
+        dots.innerText = "...";
+        container.appendChild(dots);
     }
+    if (activePage < totalPages - 1) addPageBtn(totalPages, container, activePage, currentList);
 
-    function addArrowBtn(type, container, activePage, totalPages, currentList) {
-        const isPrev = type === 'prev';
-        const isDisabled = isPrev ? activePage === 1 : activePage === totalPages;
-        const btn = document.createElement('button');
-        btn.innerHTML = isPrev ? '←' : '→';
-        btn.className = `w-10 h-10 rounded-xl font-bold transition-all flex items-center justify-center ${
-            isDisabled ? 'opacity-20 cursor-not-allowed text-emerald-700' : 'bg-emerald-900/20 text-emerald-500 hover:bg-emerald-500 hover:text-emerald-950 cursor-pointer'
-        }`;
-        if (!isDisabled) {
-            btn.onclick = () => { currentPage = isPrev ? activePage - 1 : activePage + 1; displayPlayers(currentList); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-        }
-        container.appendChild(btn);
+    addArrowBtn('next', container, activePage, totalPages, currentList);
+}
+
+function addPageBtn(page, container, activePage, currentList) {
+    const btn = document.createElement('button');
+    btn.innerText = page;
+    btn.className = `w-10 h-10 rounded-xl font-bold transition-all cursor-pointer ${
+        page === activePage ? 'bg-emerald-500 text-emerald-950 shadow-lg' : 'bg-emerald-900/40 text-emerald-500 hover:bg-emerald-800'
+    }`;
+    btn.onclick = () => { 
+        currentPage = page; 
+        loadPlayers(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' }); 
+    };
+    container.appendChild(btn);
+}
+
+function addArrowBtn(type, container, activePage, totalPages, currentList) {
+    const isPrev = type === 'prev';
+    const isDisabled = isPrev ? activePage === 1 : activePage === totalPages;
+    const btn = document.createElement('button');
+    btn.innerHTML = isPrev ? '←' : '→';
+    btn.className = `w-10 h-10 rounded-xl font-bold transition-all flex items-center justify-center ${
+        isDisabled ? 'opacity-20 cursor-not-allowed text-emerald-700' : 'bg-emerald-900/20 text-emerald-500 hover:bg-emerald-500 hover:text-emerald-950 cursor-pointer'
+    }`;
+    if (!isDisabled) {
+        btn.onclick = () => { 
+            currentPage = isPrev ? activePage - 1 : activePage + 1; 
+            loadPlayers(currentPage); 
+            window.scrollTo({ top: 0, behavior: 'smooth' }); 
+        };
     }
+    container.appendChild(btn);
+}
 
-    // --- 6. MODAL VE GRAFİK YÖNETİMİ (TAMİR EDİLDİ) ---
-    
-    // YENİ EKLEME MODALINI AÇAN FONKSİYON
-   
-
-
-    // --- 6. MODAL VE GRAFİK YÖNETİMİ ---
-
-// Yeni yetenek ekleme sayfasını (modalını) açar
-
-
-// Rapor görüntüleme modalını açar
-// Modalin dışına tıklandığında kapatma özelliği
-
+// --- 6. MODAL SİSTEMİ ---
 function openModal(name, colorClass) {
     const p = allPlayers.find(x => x.name === name);
     if (!p) return;
-    // SEO
-   document.title = `${p.name} - Reyting: ${p.rating} | FC Scout PRO`;
-   const newUrl = `${window.location.origin}${window.location.pathname}?id=${p._id}`;
-   //SEO BİTTİ
+    
+    document.title = `${p.name} - Reyting: ${p.rating} | FC Scout PRO`;
+    const newUrl = `${window.location.origin}${window.location.pathname}?id=${p._id || p.name}`;
     window.history.pushState({ path: newUrl }, '', newUrl);
-    const initials = p.name.split(' ').map(n => n[0]).join('').toUpperCase();
+
     const modalContent = document.getElementById('modal-content');
     if(modalContent) {
         modalContent.innerHTML = `
-    <div class="flex flex-col md:flex-row gap-6 items-center">
-        <div class="text-center md:w-1/3 w-full">
-            <div class="relative w-24 h-24 mx-auto mb-2 group-hover:scale-110 transition-transform duration-500">
-               ${p.potential > p.rating ? `
-               <div class="absolute -top-2 -right-2 bg-amber-500 text-emerald-950 text-[8px] font-black px-2 py-1 rounded-full z-20 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.6)]">
-                ELMAS ⭐
-               </div>` : ''}
-               <img src="${p.image}" alt="${p.name}" 
-                     class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.4)] relative z-10" 
-                     onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=064e3b&color=10b981'">
+        <div class="flex flex-col md:flex-row gap-6 items-center">
+            <div class="text-center md:w-1/3 w-full">
+                <div class="relative w-24 h-24 mx-auto mb-2 group-hover:scale-110 transition-transform duration-500">
+                    <img src="${p.image || ''}" alt="${p.name}" 
+                         class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.4)] relative z-10" 
+                         onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=064e3b&color=10b981'">
+                </div>
+                <div class="mt-4 text-4xl font-black text-emerald-400 italic">${p.rating}</div>
+                <h2 class="text-xl font-bold text-white mt-1">${p.name}</h2>
+                <p class="text-emerald-500/70 font-bold uppercase text-[10px]">${p.team} | ${p.pos}</p>
             </div>
-            <div class="mt-4 text-4xl font-black text-emerald-400 italic">${p.rating}</div>
-            <h2 class="text-xl font-bold text-white mt-1">${p.name}</h2>
-            <p class="text-emerald-500/70 font-bold uppercase text-[10px]">${p.team} | ${p.pos}</p>
-        </div>
-        
-        <div class="w-full md:w-2/3 h-[250px] sm:h-[300px] md:h-[350px]">
-            <canvas id="playerRadarChart"></canvas>
-        </div>
-    </div>`;
+            
+            <div class="w-full md:w-2/3 h-[250px] sm:h-[300px] md:h-[350px]">
+                <canvas id="playerRadarChart"></canvas>
+            </div>
+        </div>`;
     }
 
     const m = document.getElementById('player-modal');
@@ -679,14 +547,8 @@ function openModal(name, colorClass) {
     }
 }
 
-// TÜM MODALLARI (İptal butonu dahil) KAPATAN ANA FONKSİYON
-// TÜM MODALLARI KAPATAN ANA FONKSİYON
-// MODALLARI KAPATAN ANA FONKSİYON
 function closeModal() {
     const playerModal = document.getElementById('player-modal');
-    const addModal = document.getElementById('add-modal');
-    
-    // Rapor Modalı
     if (playerModal) {
         playerModal.classList.replace('opacity-100', 'opacity-0');
         setTimeout(() => {
@@ -694,145 +556,62 @@ function closeModal() {
             playerModal.classList.remove('flex');
         }, 300);
     }
-    // seo
     document.title = "FC Scout PRO - 17,500+ Oyuncu Veritabanı ve İstatistikleri";
     const cleanUrl = `${window.location.origin}${window.location.pathname}`;
-    window.history.pushState({ path: cleanUrl }, '', cleanUrl)
-    
-    // Yeni Ekleme Modalı
-    if (addModal) {
-        addModal.classList.replace('opacity-100', 'opacity-0');
-        setTimeout(() => {
-            addModal.classList.add('hidden');
-            addModal.classList.remove('flex');
-        }, 300);
-    }
+    window.history.pushState({ path: cleanUrl }, '', cleanUrl);
 }
 
-    function renderRadarChart(player, colorName) {
-        const ctx = document.getElementById('playerRadarChart').getContext('2d');
-        const themeColors = { 'yellow-400': '#fbbf24', 'slate-300': '#cbd5e1', 'orange-600': '#ea580c', 'zinc-500': '#71717a' };
-        const activeColor = themeColors[colorName] || '#10b981';
+function renderRadarChart(player, colorName) {
+    const ctx = document.getElementById('playerRadarChart').getContext('2d');
+    const themeColors = { 'yellow-400': '#fbbf24', 'slate-300': '#cbd5e1', 'orange-600': '#ea580c', 'zinc-500': '#71717a' };
+    const activeColor = themeColors[colorName] || '#10b981';
 
-        if (window.myRadarChart) window.myRadarChart.destroy();
-        window.myRadarChart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: ['HIZ', 'ŞUT', 'PAS', 'DRİ', 'DEF', 'FİZ'],
-                datasets: [{
-                    data: [player.pace || 50, player.shoot || 50, player.pass || 50, player.drib || 60, player.def || 40, player.phy || 50],
-                    backgroundColor: activeColor + '33',
-                    borderColor: activeColor,
-                    fill: true
-                }]
-            },
-            options: {
-                maintainAspectRatio: false,
-                scales: { r: { angleLines: { color: 'rgba(255,255,255,0.05)' }, grid: { color: 'rgba(255,255,255,0.05)' }, pointLabels: { color: activeColor }, ticks: { display: false }, suggestedMin: 0, suggestedMax: 100 } },
-                plugins: { legend: { display: false } }
-            }
-        });
-    }
-
-    // --- 7. FİLTRE & SIRALAMA ---
-    document.getElementById('player-search')?.addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            currentPage = 1;
-            const t = e.target.value.toLowerCase();
-            const filtered = allPlayers.filter(p => 
-                p.name.toLowerCase().includes(t) || p.team.toLowerCase().includes(t) || p.pos.toLowerCase().includes(t)
-            );
-            displayPlayers(filtered);
-        }, 300);
+    if (window.myRadarChart) window.myRadarChart.destroy();
+    window.myRadarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['HIZ', 'ŞUT', 'PAS', 'DRİ', 'DEF', 'FİZ'],
+            datasets: [{
+                data: [player.pace || 50, player.shoot || 50, player.pass || 50, player.drib || 60, player.def || 40, player.phy || 50],
+                backgroundColor: activeColor + '33',
+                borderColor: activeColor,
+                fill: true
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: { r: { angleLines: { color: 'rgba(255,255,255,0.05)' }, grid: { color: 'rgba(255,255,255,0.05)' }, pointLabels: { color: activeColor }, ticks: { display: false }, suggestedMin: 0, suggestedMax: 100 } },
+            plugins: { legend: { display: false } }
+        }
     });
+}
 
-    function filterByTier(tier) {
-        currentPage = 1;
-        let filtered = allPlayers;
-        if(tier !== 'all') {
-            filtered = allPlayers.filter(p => {
-                const r = Number(p.rating);
-                if (tier === 'gold') return r >= 80;
-                if (tier === 'silver') return r >= 70 && r < 80;
-                if (tier === 'bronze') return r >= 60 && r < 70;
-                if (tier === 'iron') return r < 60;
-            });
-        }
-        displayPlayers(filtered);
-    }
-    function filterByPosition(pos){
-        currentPage = 1;
-        let filtered;
-        if (pos === "all") {
-            filtered = allPlayers;
-        } else {
-            filtered = allPlayers.filter(p => p.pos === pos);
-        }
-        displayPlayers(filtered);
-    }
+// --- 7. ARAMA VE FİLTRELEME (FRONTEND) ---
+function filterByTier(tier) {
+    currentTier = tier;
+    currentPage = 1; // Filtre değişince 1. sayfaya dön
+    loadPlayers(1);
+}
 
-    function sortPlayers(key) {
-        currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
-        currentPage = 1;
-        const sorted = [...allPlayers].sort((a, b) => {
-            const vA = Number(a[key]) || 0;
-            const vB = Number(b[key]) || 0;
-            return currentSortDir === 'desc' ? vB - vA : vA - vB;
-        });
-        displayPlayers(sorted);
-    }
-
-  
-
-    // --- 8. INIT & VERİ ---
-    // --- 8. VERİ YÖNETİMİ (17.000+ VERİ İÇİN OPTİMİZE) ---
-async function init() {
-    const grid = document.getElementById('player-grid');
-    if(grid) {
-        showSkeleton();
-    }
-    
-    if(grid) {
-        grid.innerHTML = `
-            <div class="col-span-full flex flex-col items-center justify-center py-20 text-emerald-500">
-                <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p class="font-black tracking-widest animate-pulse">17,000+ VERİ ANALİZ EDİLİYOR...</p>
-                <p class="text-[10px] opacity-50 mt-2 uppercase">Lütfen bekleyin, kadrolar yükleniyor</p>
-            </div>`;
-    }
-   try {
-    const API_URL = "https://fc-scout-pro.onrender.com";
-    
-    // 1. Önce sunucuya o tanımladığımız URL üzerinden istek atıyoruz:
-    // Sona eklediğimiz ?t=... kısmı cache çakışmasını önleyen timestamp'tir.
-    const response = await fetch(`http://localhost:3000/api/players?t=${Date.now()}`);
-    
-    // 2. Sunucu yanıt verdi mi diye kontrol ediyoruz
-    if (!response.ok) throw new Error('Sunucu yanıt vermedi');
-    
-    // 3. Yanıtı JSON formatına çeviriyoruz
-    allPlayers = await response.json();
-    
-    // Veri başarıyla geldiğinde:
-    console.log(`${allPlayers.length} oyuncu başarıyla yüklendi.`);
-    
-    // Sayfayı 1. sıradan başlat ve listele
+function filterByPosition(pos) {
+    currentPos = pos;
     currentPage = 1;
-    displayPlayers(allPlayers);
+    loadPlayers(1);
+}
 
-} catch (error) {
-    console.error("Veri yükleme hatası:", error);
-    if(grid) {
-        grid.innerHTML = `
-            <div class="col-span-full text-center py-20 border border-red-500/20 rounded-3xl bg-red-500/5">
-                <p class="text-red-500 font-bold">Veriler yüklenirken bir sorun oluştu.</p>
-                <button onclick="init()" class="mt-4 px-6 py-2 bg-red-500 text-white rounded-xl text-xs font-bold uppercase hover:bg-red-600 transition-all">Tekrar Dene</button>
-            </div>`;
+function sortPlayers(key) {
+    // Eğer aynı şeye tekrar tıklanırsa sıralama yönünü tersine çevir (A-Z / Z-A gibi)
+    if (currentSort === key) {
+        currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+        currentSort = key;
+        currentSortDir = 'desc'; // Yeni bir şeye tıklandığında her zaman önce en yüksekten başlasın
     }
+    currentPage = 1;
+    loadPlayers(1);
 }
-}
-// Favoriye ekleme/çıkarma işlemi
+
+// Favorilere ekleme
 function toggleBookmark(playerId) {
     const index = bookmarks.indexOf(playerId);
     if (index === -1) {
@@ -841,37 +620,13 @@ function toggleBookmark(playerId) {
         bookmarks.splice(index, 1);
     }
     localStorage.setItem('scout_bookmarks', JSON.stringify(bookmarks));
-    
-    // Mevcut sayfadaki kartları güncellemek için render'ı tekrar çağır
-    // Not: Arama veya filtreleme yapılmışsa o listeyi korumak için 
-    // displayPlayers'ı parametresiz çağırabilirsin (varsayılan allPlayers kullanır)
     displayPlayers(allPlayers); 
 }
 
-// Sadece favorileri gösteren filtre fonksiyonu
-function filterByBookmarks() {
-    currentPage = 1;
-    // id varsa id'ye, yoksa isme göre filtrele
-    const favoritePlayers = allPlayers.filter(p => bookmarks.includes(p.id || p.name));
-    
-    if (favoritePlayers.length === 0) {
-        document.getElementById('player-grid').innerHTML = `
-            <div class="col-span-full py-20 text-center flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-emerald-800 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-                <p class="text-emerald-500 font-bold uppercase tracking-widest">Henüz favori oyuncun yok.</p>
-            </div>`;
-        document.getElementById('pagination-numbers').innerHTML = '';
-        updateStats([]);
-    } else {
-        displayPlayers(favoritePlayers);
-    }
-}
 function logout() {
     localStorage.clear();
     window.location.href = "/";
 }
-</script>
+    </script>
 </body>
 </html>

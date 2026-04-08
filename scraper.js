@@ -7,7 +7,7 @@ async function fetchAllPlayers() {
     let offset = 0;
     
     // --- KRİTİK GÜNCELLEME: Hedef Sayı ---
-    const maxPlayers = 17500; // Tüm veri setini kapsamak için (FC 25'te yaklaşık bu civardadır)
+    const maxPlayers = 17500; // Tüm veri setini kapsamak için (FC 26'te yaklaşık bu civardadır)
     const delay = (ms) => new Promise(res => setTimeout(res,ms));
     await delay(500);
 

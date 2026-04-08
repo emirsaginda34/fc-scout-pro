@@ -108,16 +108,32 @@ app.post('/login', (req, res) => {
     }
 });
 
-app.get('/api/players', async (req, res)=> {
-    try {
-        const players = await Player.find({})
-                             .sort({ rating: -1})
-                             .limit(50);
-    res.json(players);
-    } catch (error){
-        console.error("Veri çekme hatası:", error);
-        res.status(500).json({message: "Sunucu hatası oluştu."});
+// Backend - players rotası örneği
+app.get('/api/players', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const sort = req.query.sort || 'rating';
+    const order = req.query.order === 'asc' ? 1 : -1;
+    const tier = req.query.tier;
+
+    let query = {};
+    
+    // Tier filtresi eklendiyse (Gold, Silver vb.)
+    if (tier && tier !== 'all') {
+        if (tier === 'gold') query.rating = { $gte: 80 };
+        else if (tier === 'silver') query.rating = { $gte: 70, $lt: 80 };
+        else if (tier === 'bronze') query.rating = { $gte: 60, $lt: 70 };
+        else if (tier === 'iron') query.rating = { $lt: 60 };
     }
+
+    const players = await Player.find(query)
+                                .sort({ [sort]: order }) // Sıralama burası
+                                .skip((page - 1) * limit)
+                                .limit(limit);
+
+    const totalPlayers = await Player.countDocuments(query);
+
+    res.json({ players, totalPlayers });
 });
 
 app.get('/api/wonderkids', async (req, res) => {
