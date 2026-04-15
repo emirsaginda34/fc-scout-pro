@@ -187,9 +187,6 @@
                 Favorilerim
             </button>
         </div>
-        <button id="wonderkids-btn" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-6 rounded-lg transition-all duration-200 shadow-lg flex items-center gap-2">
-    <span>💎</span> META PLAYERS
-</button>
     </div>
 
     <div class="flex items-center gap-2 flex-nowrap whitespace-nowrap">
@@ -268,15 +265,25 @@ let bookmarks = JSON.parse(localStorage.getItem('scout_bookmarks')) || [];
 const playersPerPage = 12;
 
 // Hatanın çözümü olan satırlar burası:
+let currentSearch = '';
 let currentPage = 1;
 let currentTier = 'all';
 let currentPos = 'all';
 let currentSort = 'rating'; // "ReferenceError: currentSort is not defined" hatasını bu çözer
 let currentSortDir = 'desc';
-let currentUser = {
-    name: localStorage.getItem('loggedUser') || "Bilinmiyor",
+
+const currentUser = {
+    name: localStorage.getItem('loggedUser') || "Kullanıcı",
     role: localStorage.getItem('userRole') || "user"
 };
+
+document.addEventListener('DOMContentLoaded', ()=> {
+    const nameInput = document.getElementById('settings-name-input');
+    if (nameInput) nameInput.value = currentUser.name;
+    
+    const welcomeText = document.getElementById('settings-welcome');
+    if (welcomeText) welcomeText.innerHTML = `Hoş geldin, ${currentUser.name}`
+});
 
 // --- 2. GÜVENLİK ---
 if (!localStorage.getItem('loggedUser')) {
@@ -295,7 +302,19 @@ function updateNavUI() {
         nameElement.innerText = currentUser.name.toUpperCase();
     }
 }
-
+ const posFilter = document.getElementById('pos-filter');
+    if (posFilter) {
+        posFilter.addEventListener('change', (e) => {
+            filterByPosition(e.target.value);
+        });
+    }
+    const searchInput = document.getElementById('player-search');
+    if (searchInput) {
+        // Kullanıcı yazarken arama yapmak için (Debounce önerilir ama şimdilik direkt yapalım)
+        searchInput.addEventListener('input', (e) => {
+            handleSearch(e.target.value);
+        });
+    }
 // --- 3. YARDIMCI FONKSİYONLAR ---
 function renderStat(label, value) {
     return `
@@ -310,43 +329,58 @@ function renderStat(label, value) {
 }
 
 function updateStats(players, totalCount = null) {
-    // Backend'den 17500 geldiyse onu kullan, yoksa o anki listenin uzunluğunu al
-    const total = totalCount !== null ? totalCount : players.length;
-    const avg = players.length > 0 ? (players.reduce((sum, p) => sum + (Number(p.rating) || 0), 0) / players.length).toFixed(1) : 0;
-    const maxPace = players.length > 0 ? Math.max(...players.map(p => Number(p.pace) || 0)) : 0;
+    // Güvenlik: Eğer players gelmezse boş bir dizi olarak kabul et
+    const safePlayers = players || []; 
     
-    if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = total.toLocaleString('tr-TR');
-    if(document.getElementById('stat-avg')) document.getElementById('stat-avg').innerText = avg;
-    if(document.getElementById('stat-pace')) document.getElementById('stat-pace').innerText = maxPace;
+    const total = totalCount !== null ? totalCount : safePlayers.length;
+    
+    // safePlayers kullanarak hesaplama yap
+    const avg = safePlayers.length > 0 
+        ? (safePlayers.reduce((sum, p) => sum + (Number(p.rating) || 0), 0) / safePlayers.length).toFixed(1) 
+        : 0;
+        
+    const maxPace = safePlayers.length > 0 
+        ? Math.max(...safePlayers.map(p => Number(p.pace) || 0)) 
+        : 0;
+    
+    // UI Güncelleme
+    const elements = {
+        'stat-total': total.toLocaleString('tr-TR'),
+        'stat-avg': avg,
+        'stat-pace': maxPace
+    };
+
+    for (const [id, value] of Object.entries(elements)) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = value;
+    }
 }
 
 async function loadPlayers(page = 1) {
     try {
         const grid = document.getElementById('player-grid');
-        if (grid) {
-            grid.innerHTML = '<div class="col-span-full text-center py-20 text-emerald-500 font-bold animate-pulse">Oyuncular yükleniyor...</div>';
-        }
+        if (grid) grid.innerHTML = '<div class="col-span-full text-center py-20 text-emerald-500 font-bold animate-pulse">Oyuncular yükleniyor...</div>';
 
-        // Backend'e sayfa, limit, filtre ve sıralama bilgilerini tek seferde gönderiyoruz
         let url = `http://localhost:3000/api/players?page=${page}&limit=${playersPerPage}&sort=${currentSort}&order=${currentSortDir}`;
         
         if (currentTier !== 'all') url += `&tier=${currentTier}`;
-        if (currentPos !== 'all') url += `&pos=${currentPos}`;
+        if (currentPos !== 'all') url += `&pos=${encodeURIComponent(currentPos)}`;
+        if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`; // Arama parametresi eklendi
 
         const response = await fetch(url);
         const data = await response.json();
 
         allPlayers = data.players; 
-        
-        // Kartları bas
         displayPlayers(data.players, data.totalPlayers);
-
-        // Sayfalamayı oluştur
         renderPaginationButtons(data.totalPlayers, playersPerPage, page, data.players);
-
     } catch (error) {
         console.error("Oyuncular yüklenirken hata oluştu:", error);
     }
+}
+function handleSearch(query) {
+    currentSearch = query;
+    currentPage = 1;
+    loadPlayers(1);
 }
 
 function displayPlayers(players, totalCount = null) {
@@ -439,6 +473,7 @@ function displayPlayers(players, totalCount = null) {
             </div>`;
     }).join('');
 }
+
 
 // --- 5. SAYFALAMA SİSTEMİ ---
 function renderPaginationButtons(totalPlayers, playersPerPage, activePage, currentList) {
@@ -621,6 +656,44 @@ function toggleBookmark(playerId) {
     }
     localStorage.setItem('scout_bookmarks', JSON.stringify(bookmarks));
     displayPlayers(allPlayers); 
+}
+// Favoriler butonuna basıldığında çalışacak ana fonksiyon
+function filterByBookmarks() {
+    if (bookmarks.length === 0) {
+        alert("Henüz favorilere eklenmiş bir oyuncu yok!");
+        return;
+    }
+    // Direkt backend'den güncel favori verilerini çek
+    loadFavoritePlayersFromBackend();
+}
+
+async function loadFavoritePlayersFromBackend() {
+    try {
+        if (bookmarks.length === 0) return;
+
+        const grid = document.getElementById('player-grid');
+        grid.innerHTML = '<div class="col-span-full text-center py-20 text-yellow-500 font-bold animate-pulse">Favoriler yükleniyor...</div>';
+
+        const response = await fetch(`http://localhost:3000/api/players?names=${encodeURIComponent(bookmarks.join(','))}`);
+        
+        if (!response.ok) throw new Error('Sunucu yanıt vermedi');
+
+        const data = await response.json();
+
+        // data.players'ın var olduğundan emin olalım
+        if (data && data.players) {
+            allPlayers = data.players; 
+            displayPlayers(data.players, data.totalPlayers);
+            document.getElementById('pagination-numbers').innerHTML = '';
+        } else {
+            grid.innerHTML = '<p class="col-span-full text-center py-20 text-emerald-500">Oyuncu bulunamadı.</p>';
+        }
+        
+    } catch (error) {
+        console.error("Favoriler yüklenirken hata:", error);
+        const grid = document.getElementById('player-grid');
+        grid.innerHTML = '<p class="col-span-full text-center py-20 text-red-500 font-bold">Favoriler getirilemedi. Sunucuyu kontrol edin.</p>';
+    }
 }
 
 function logout() {

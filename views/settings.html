@@ -47,7 +47,7 @@
 
             <div class="space-y-2">
                 <label class="text-[10px] font-bold text-emerald-500 uppercase ml-1">Yeni Şifre</label>
-                <input type="password" id="password-input" placeholder="••••••••" class="w-full bg-emerald-950/50 border border-emerald-500/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-all">
+              <input type="password" id="password-input" autocomplete="new-password" placeholder="••••••••" class="w-full bg-emerald-950/50 border border-emerald-500/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-all">
                 <p class="text-[9px] text-white/40 ml-1">Kalan Hak: <span id="pass-limit" class="text-emerald-400">-/-</span></p>
             </div>
 
@@ -82,11 +82,21 @@
 
     // 1. SAYFA YÜKLENDİĞİNDE VERİLERİ VE LİMİTLERİ ÇEK
     window.addEventListener('DOMContentLoaded', async () => {
-        // Yerel isim güncelleme
-        const storedName = localStorage.getItem('loggedUser') || "Emir";
-        document.getElementById('display-name').innerText = storedName;
-        document.getElementById('username-input').value = storedName;
-        document.getElementById('profile-initial').innerText = storedName.charAt(0).toUpperCase();
+        const storedName = localStorage.getItem('loggedUser');
+        
+        if (!storedName) {
+            window.location.href = "/";
+            return; // Kodun geri kalanını çalıştırma
+        }
+
+        // --- HATALI SATIR SİLİNDİ, MEVCUT ELEMENTLER GÜNCELLENİYOR ---
+        const displayName = document.getElementById('display-name');
+        const usernameInput = document.getElementById('username-input');
+        const profileInitial = document.getElementById('profile-initial');
+
+        if (displayName) displayName.innerText = storedName;
+        if (usernameInput) usernameInput.value = storedName;
+        if (profileInitial) profileInitial.innerText = storedName.charAt(0).toUpperCase();
 
         await refreshLimits();
     });

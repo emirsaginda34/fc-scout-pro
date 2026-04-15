@@ -7,5 +7,14 @@
       "username": 1,
       "password": 0
     }
+  },
+  {
+    "username": "imsadmin",
+    "password": "$2b$10$LJFNb.fr9eE.SFfpQoEpHegGwddmp8fU4dtxGccmULYR6np4VtmVW",
+    "role": "user",
+    "updateLimits": {
+      "username": 0,
+      "password": 0
+    }
   }
 ]

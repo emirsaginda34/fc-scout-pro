@@ -110,36 +110,74 @@ app.post('/login', (req, res) => {
 
 // Backend - players rotası örneği
 app.get('/api/players', async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
-    const sort = req.query.sort || 'rating';
-    const order = req.query.order === 'asc' ? 1 : -1;
-    const tier = req.query.tier;
+    try {
+        let query = {}
+        // server.js içindeki sorgu kısmına ekle:
+      if (req.query.names) {
+    const namesArray = req.query.names.split(',');
+    query.name = { $in: namesArray }; // Sadece listedeki isimleri getir
+     } else {
+        if (req.query.search) {
+                query.name = { $regex: req.query.search, $options: 'i' };
+            }
+            if (req.query.pos && req.query.pos !== 'all') {
+                query.pos = req.query.pos;
+            }
+     }
+        
+        // Frontend'den gelen filtre parametreleri
+        const { tier, pos, search } = req.query;
 
-    let query = {};
-    
-    // Tier filtresi eklendiyse (Gold, Silver vb.)
-    if (tier && tier !== 'all') {
-        if (tier === 'gold') query.rating = { $gte: 80 };
-        else if (tier === 'silver') query.rating = { $gte: 70, $lt: 80 };
-        else if (tier === 'bronze') query.rating = { $gte: 60, $lt: 70 };
-        else if (tier === 'iron') query.rating = { $lt: 60 };
+        // "query" veya "filter" nesnesini burada tanımlıyoruz
+       
+
+        // 1. Mevki Filtresi (Pos)
+        if (pos && pos !== 'all') {
+            query.pos = pos;
+        }
+
+        // 2. Arama Filtresi (Search)
+        if (search) {
+            query.name = { $regex: search, $options: 'i' }; // Büyük/küçük harf duyarsız arama
+        }
+
+        // 3. Tier (Kategori) Filtresi
+        if (tier && tier !== 'all') {
+            if (tier === 'gold') query.rating = { $gte: 80 };
+            else if (tier === 'silver') query.rating = { $gte: 70, $lt: 80 };
+            else if (tier === 'bronze') query.rating = { $gte: 60, $lt: 70 };
+            else if (tier === 'iron') query.rating = { $lt: 60 };
+        }
+        
+       const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 12;
+
+        // Favoriler listelenirken sayfalamayı devre dışı bırakmak isteyebilirsin
+        const sortField = req.query.sort || 'rating';
+        const sortOrder = req.query.order === 'asc' ? 1 : -1;
+        const players = await Player.find(query)
+            .sort({ [sortField]: sortOrder }) // Rating'e göre sırala
+            .limit(limit)
+            .skip((page - 1) * limit);
+
+        const totalPlayers = await Player.countDocuments(query);
+
+        res.json({
+            players: players || [], // Burası kritik: null yerine boş dizi dönmeli
+            totalPlayers: totalPlayers
+        });
+    } catch (error) {
+        console.error("Backend Hatası:", error);
+        res.status(500).json({ error: "Sunucu hatası" });
     }
-
-    const players = await Player.find(query)
-                                .sort({ [sort]: order }) // Sıralama burası
-                                .skip((page - 1) * limit)
-                                .limit(limit);
-
-    const totalPlayers = await Player.countDocuments(query);
-
-    res.json({ players, totalPlayers });
 });
+        
 
 app.get('/api/wonderkids', async (req, res) => {
     try {
         // 1. Veritabanından tüm oyuncuları çekiyoruz
         const players = await Player.find({});
+        
 
         // 2. Her oyuncu için mevkisine göre "Meta Güç Puanı" hesaplıyoruz
         const enrichedMetaPlayers = players.map(p => {
