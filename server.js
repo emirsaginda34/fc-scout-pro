@@ -1,71 +1,25 @@
-// Doğrudan .env dosyasını oku (Localhost için en rahat yöntem)
+// 1. Gerekli Modülleri Yükle
 require('dotenv').config();
-
-const cors = require('cors');
 const express = require('express');
-const app = express();
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose');
 
-// 1. Veritabanı Bağlantısı ve Port Ayarı
-const mongoURI = process.env.MONGO_URI;
-mongoose.connect(mongoURI)
-    .then(() => console.log("🚀 Veritabanına güvenli şekilde bağlandık!"))
-    .catch(err => console.error("❌ Bağlantı hatası:", err));
-const PORT = process.env.PORT || 3000;
+// 2. Kendi Modüllerini Yükle (Refactor ettiğin dosyalar)
+const connectDB = require('./config/db');
+const Player = require('./models/player');
+const cors = require('./middlewares/corsConfig'); // Dosya yolu düzeltildi
 
-if (!mongoURI) {
-    console.warn("⚠️ UYARI: MONGO_URI bulunamadı! Lütfen proje klasöründe .env dosyası oluşturup içine MONGO_URI=linkiniz şeklinde ekleyin.");
-}
+const app = express();
+const PORT = process.env.PORT || 3000; // PORT burada tanımlandı!
 
-const playerSchema = new mongoose.Schema({
-    id: Number,
-    name: String,
-    position: String,
-    rating: Number,
-    pace: Number,
-    age: Number,
-    tier: String,
-    team: String,
-    league: String,
-    stats: Object
-}, { strict: false });
+// 3. Veritabanı Bağlantısı
+connectDB();
 
-const Player = mongoose.model('Player', playerSchema, 'players');
-
-// Sadece mongoURI varsa bağlanmayı dene (Sunucunun çökmesini engeller)
-if (mongoURI) {
-    mongoose.connect(mongoURI)
-        .then(() => console.log("🚀 MongoDB Atlas bağlantısı başarılı!"))
-        .catch(err => {
-            console.error("❌ MongoDB Bağlantı hatası:", err);
-        });
-}
-
-const allowedOrigins = [
-    'https://fc-scout-pro.onrender.com', 
-    'http://localhost:3000',             
-    'http://127.0.0.1:5500',
-    'http://localhost:5500', 
-    'http://127.0.0.1:3000'  
-];
-
-app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('CORS Politikası: Bu adresten erişim izniniz yok!'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true 
-}));
-
+// 4. Middleware Ayarları
+app.use(cors); // Ayrı dosyadan gelen CORS ayarını kullan
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 
 // IP Ban Sistemi
 const securityLog = new Map();
@@ -77,9 +31,8 @@ const checkBanStatus = (req, res, next) => {
     }
     next();
 };
-app.use(checkBanStatus); 
+app.use(checkBanStatus);
 
-const playersPath = path.join(__dirname, 'data', 'players.json');
 const usersFilePath = path.join(__dirname, 'data', 'users.json');
 
 const getUsers = () => {
@@ -108,40 +61,18 @@ app.post('/login', (req, res) => {
     }
 });
 
-// Backend - players rotası örneği
 app.get('/api/players', async (req, res) => {
     try {
-        let query = {}
-        // server.js içindeki sorgu kısmına ekle:
-      if (req.query.names) {
-    const namesArray = req.query.names.split(',');
-    query.name = { $in: namesArray }; // Sadece listedeki isimleri getir
-     } else {
-        if (req.query.search) {
-                query.name = { $regex: req.query.search, $options: 'i' };
-            }
-            if (req.query.pos && req.query.pos !== 'all') {
-                query.pos = req.query.pos;
-            }
-     }
-        
-        // Frontend'den gelen filtre parametreleri
-        const { tier, pos, search } = req.query;
+        let query = {};
+        const { tier, pos, search, names } = req.query;
 
-        // "query" veya "filter" nesnesini burada tanımlıyoruz
-       
-
-        // 1. Mevki Filtresi (Pos)
-        if (pos && pos !== 'all') {
-            query.pos = pos;
+        if (names) {
+            query.name = { $in: names.split(',') };
+        } else {
+            if (search) query.name = { $regex: search, $options: 'i' };
+            if (pos && pos !== 'all') query.pos = pos;
         }
 
-        // 2. Arama Filtresi (Search)
-        if (search) {
-            query.name = { $regex: search, $options: 'i' }; // Büyük/küçük harf duyarsız arama
-        }
-
-        // 3. Tier (Kategori) Filtresi
         if (tier && tier !== 'all') {
             if (tier === 'gold') query.rating = { $gte: 80 };
             else if (tier === 'silver') query.rating = { $gte: 70, $lt: 80 };
@@ -149,97 +80,62 @@ app.get('/api/players', async (req, res) => {
             else if (tier === 'iron') query.rating = { $lt: 60 };
         }
         
-       const page = parseInt(req.query.page) || 1;
+        const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 12;
-
-        // Favoriler listelenirken sayfalamayı devre dışı bırakmak isteyebilirsin
         const sortField = req.query.sort || 'rating';
         const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
         const players = await Player.find(query)
-            .sort({ [sortField]: sortOrder }) // Rating'e göre sırala
+            .sort({ [sortField]: sortOrder })
             .limit(limit)
             .skip((page - 1) * limit);
 
         const totalPlayers = await Player.countDocuments(query);
 
-        res.json({
-            players: players || [], // Burası kritik: null yerine boş dizi dönmeli
-            totalPlayers: totalPlayers
-        });
+        res.json({ players: players || [], totalPlayers });
     } catch (error) {
-        console.error("Backend Hatası:", error);
         res.status(500).json({ error: "Sunucu hatası" });
     }
 });
-        
 
 app.get('/api/wonderkids', async (req, res) => {
     try {
-        // 1. Veritabanından tüm oyuncuları çekiyoruz
         const players = await Player.find({});
-        
-
-        // 2. Her oyuncu için mevkisine göre "Meta Güç Puanı" hesaplıyoruz
         const enrichedMetaPlayers = players.map(p => {
             const playerObj = p.toObject();
-            
-            const pace = Number(playerObj.pace) || 0;
-            const shoot = Number(playerObj.shoot) || 0;
-            const pass = Number(playerObj.pass) || 0;
-            const drib = Number(playerObj.drib) || 0;
-            const def = Number(playerObj.def) || 0;
-            const phy = Number(playerObj.phy) || 0;
-
+            const { pace=0, shoot=0, pass=0, drib=0, def=0, phy=0, pos='' } = playerObj;
             let metaScore = 0;
-            const pos = playerObj.pos ? playerObj.pos.toUpperCase() : '';
+            const pPos = pos.toUpperCase();
 
-            // MEVKİYE GÖRE ÖZEL FORMÜL (Örn: Defans için defans ve fizik, forvet için şut ve hız önemlidir)
-            if (['ST', 'LW', 'RW', 'CF'].includes(pos)) {
+            if (['ST', 'LW', 'RW', 'CF'].includes(pPos)) {
                 metaScore = (pace * 0.35) + (shoot * 0.35) + (drib * 0.20) + (pass * 0.10);
-            } else if (['CAM', 'CM', 'LM', 'RM'].includes(pos)) {
+            } else if (['CAM', 'CM', 'LM', 'RM'].includes(pPos)) {
                 metaScore = (pass * 0.30) + (drib * 0.30) + (pace * 0.20) + (shoot * 0.20);
-            } else if (['CB', 'RB', 'LB', 'CDM', 'RWB', 'LWB'].includes(pos)) {
+            } else if (['CB', 'RB', 'LB', 'CDM', 'RWB', 'LWB'].includes(pPos)) {
                 metaScore = (def * 0.35) + (phy * 0.25) + (pace * 0.30) + (pass * 0.10);
             } else {
-                // Pozisyon belirsizse düz ortalama al
                 metaScore = (pace + shoot + pass + drib + def + phy) / 6;
             }
-
-            return {
-                ...playerObj,
-                potential: metaScore // Frontend'i bozmamak için hesaplanan Meta Puanı 'potential' değişkenine atıyoruz
-            };
+            return { ...playerObj, potential: metaScore };
         });
 
-        // 3. Meta puanı en yüksek 50 canavarı sırala
         enrichedMetaPlayers.sort((a, b) => b.potential - a.potential);
-        
         res.json(enrichedMetaPlayers.slice(0, 50));
-
     } catch (error) {
-        console.error("Hata:", error);
         res.status(500).json({ success: false });
     }
 });
 
 app.get('/api/user-status', (req, res) => {
     const users = getUsers();
-    
-    // Tarayıcıdan gelen kullanıcı adını URL'den alıyoruz (Örn: ?username=EMRUZOR)
     const requestUsername = req.query.username;
+    if (!requestUsername) return res.status(400).json({ success: false });
 
-    if (!requestUsername) {
-        return res.status(400).json({ success: false, error: "Kullanıcı adı belirtilmedi." });
-    }
-
-    // Gelen isme göre users.json içinde tam eşleşme arıyoruz
     const user = users.find(u => u.username.toLowerCase() === requestUsername.toLowerCase());
-    
     if (user) {
-        const limits = user.updateLimits || { username: 0, password: 0 };
-        res.json({ success: true, limits: limits });
+        res.json({ success: true, limits: user.updateLimits || { username: 0, password: 0 } });
     } else {
-        res.status(404).json({ success: false, error: "Kullanıcı bulunamadı." });
+        res.status(404).json({ success: false });
     }
 });
 
@@ -252,73 +148,25 @@ app.post('/api/security-alert', (req, res) => {
     res.json({ success: true, banned: record.isBanned });
 });
 
-app.post('/api/update-settings', (req, res) => {
-    try {
-        const { newUsername, newPassword } = req.body;
-        let users = getUsers();
-        
-        // 1. ADIM: İsteği atan kullanıcının ESKİ adını frontend'den alacağız.
-        // Bunun için req.body'den mevcut kullanıcı adını da çekelim.
-        const { currentUsername } = req.body; 
-
-        // 2. ADIM: Dosyada o anki kullanıcıyı tam adıyla arıyoruz.
-        let userIndex = users.findIndex(u => u.username.toLowerCase() === currentUsername.toLowerCase());
-        
-        if (userIndex === -1) return res.status(404).json({ success: false, error: "Kullanıcı yok." });
-
-        let user = users[userIndex];
-        if (!user.updateLimits) user.updateLimits = { username: 0, password: 0 };
-
-        let updated = false;
-        if (newUsername && newUsername !== user.username && user.updateLimits.username < 2) {
-            user.username = newUsername;
-            user.updateLimits.username += 1;
-            updated = true;
-        }
-        
-        if (newPassword && newPassword.trim() !== "" && user.updateLimits.password < 2) {
-            const salt = bcrypt.genSaltSync(10);
-            user.password = bcrypt.hashSync(newPassword, salt); 
-            user.updateLimits.password += 1;
-            updated = true;
-        }
-
-        if (updated) {
-            users[userIndex] = user;
-            fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
-            res.json({ success: true, message: "Güncellendi", limits: user.updateLimits });
-        } else {
-            res.status(400).json({ success: false, error: "Limit doldu veya değişiklik yok." });
-        }
-    } catch (err) {
-        res.status(500).json({ success: false });
-    }
-});
-
 app.post('/register', (req, res) => {
     const { username, password } = req.body;
     const users = getUsers();
-
-    if (!password || password.length < 6) {
-        return res.status(400).json({ success: false, error: "Şifre en az 6 karakter olmalıdır!" });
-    }
+    if (!password || password.length < 6) return res.status(400).json({ success: false, error: "Şifre kısa!" });
 
     if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
-        return res.status(400).json({ success: false, error: "Bu kullanıcı adı zaten alınmış!" });
+        return res.status(400).json({ success: false, error: "Kullanıcı var!" });
     }
 
     const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(password, salt);
-
     users.push({ 
         username, 
-        password: hashedPassword, 
+        password: bcrypt.hashSync(password, salt), 
         role: 'user', 
         updateLimits: { username: 0, password: 0 } 
     });
     
     fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
-    res.json({ success: true, message: "Kayıt başarılı!" }); 
+    res.json({ success: true }); 
 });
 
 app.use(express.static('public')); 
@@ -328,9 +176,7 @@ app.get('/dashboard-sayfasi', (req, res) => res.sendFile(path.join(__dirname, 'v
 app.get('/settings', (req, res) => res.sendFile(path.join(__dirname, 'views', 'settings.html')));
 app.get('/register-page', (req, res) => res.sendFile(path.join(__dirname, 'views', 'register.html')));
 
-
-
-// Sunucuyu Başlatma (Hem Localhost hem de Vercel/Render için tam uyumlu ihracat)
-app.listen(PORT, () => console.log(`🚀 Sunucu http://localhost:${PORT} portunda canavar gibi çalışıyor!`));
+// Sunucuyu Başlatma
+app.listen(PORT, () => console.log(`🚀 Sunucu http://localhost:${PORT} portunda çalışıyor!`));
 
 module.exports = app;
