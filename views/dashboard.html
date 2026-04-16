@@ -61,6 +61,14 @@
         -moz-appearance: textfield !important;
         appearance: none !important;
     }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px);}
+        to { opacity: 1; transform: translateY(0);}
+    }
+
+    .animate-fadeIn {
+        animation: fadeIn 0.5s ease-out forwards;
+    }
 </style>
 <body class="bg-emerald-950 text-emerald-50 min-h-screen font-sans">
 
@@ -660,11 +668,39 @@ function toggleBookmark(playerId) {
 // Favoriler butonuna basıldığında çalışacak ana fonksiyon
 function filterByBookmarks() {
     if (bookmarks.length === 0) {
-        alert("Henüz favorilere eklenmiş bir oyuncu yok!");
+        renderEmptyState();
         return;
     }
     // Direkt backend'den güncel favori verilerini çek
     loadFavoritePlayersFromBackend();
+}
+
+function renderEmptyState(){
+    const grid = document.getElementById('player-grid');
+    const pagination = document.getElementById('pagination-numbers');
+
+    if (!grid) return;
+    if (pagination) pagination.innerHTML = '';
+    grid.innerHTML = `
+        <div class="col-span-full flex flex-col items-center justify-center py-20 text-center animate-fadeIn">
+            <div class="w-24 h-24 mb-6 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-emerald-500 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+            </div>
+            
+            <h3 class="text-2xl font-black text-white mb-2 italic tracking-tight">HENÜZ FAVORİ OYUNCUN YOK</h3>
+            <p class="text-emerald-500/60 max-w-md mx-auto font-medium text-sm leading-relaxed">
+                Görünüşe göre transfer listene henüz kimseyi eklememişsin. 
+                Oyuncu kartlarındaki <span class="text-emerald-400 font-bold underline">kaydet</span> ikonuna basarak scouting listeni oluşturmaya başlayabilirsin.
+            </p>
+            
+            <button onclick="loadPlayers(1)" 
+                    class="mt-8 px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-xl uppercase tracking-widest text-xs">
+                Oyuncuları Keşfet
+            </button>
+        </div>
+    `;
 }
 
 async function loadFavoritePlayersFromBackend() {
