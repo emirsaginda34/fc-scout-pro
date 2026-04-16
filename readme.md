@@ -47,7 +47,7 @@ PORT=3000
 // sistemi başlatın
 node server.js
 
-Geliştirici Notu: Bu proje EA Sports FC 25 oyuncu datasetleri baz alınarak, tamamen bağımsız bir scout simülasyonu olarak geliştirilmiştir.
+Geliştirici Notu: Bu proje EA Sports FC 26 oyuncu datasetleri baz alınarak, tamamen bağımsız bir scout simülasyonu olarak geliştirilmiştir.
 
 
 ---
