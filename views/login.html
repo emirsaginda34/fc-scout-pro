@@ -61,8 +61,9 @@
                     
                     <div class="relative">
                         <h2 class="text-2xl font-bold text-emerald-400 mb-6 text-center uppercase tracking-tighter">Scout Girişi</h2>
-
-                        <form action="/login" method="POST" class="space-y-4">
+                        <div class="forgot-password-container">
+                            
+                        <form id="login-form" class="space-y-4">
                             <div id="error-box" class="hidden mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-400 text-sm items-center gap-3 shadow-lg shadow-red-900/20 backdrop-blur-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 shrink-0 text-red-500">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -100,6 +101,7 @@
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 <span id="btn-text">Sisteme Eriş</span>
+                                
                             </button>
                         </form>
                         
@@ -122,92 +124,83 @@
         </div>
     </footer>
   
-    <script>
-        function scrollToLogin(){
-            document.getElementById('login-section').scrollIntoView({
-                behavior: 'smooth'
-            });
-        }
-        document.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.getItem('loggedUser')) {
-        // Eğer giriş yapmışsa direkt ana dashboard'a yönlendir 
-        // veya landing sayfasını gizle:
-        document.getElementById('landing-page').style.display = 'none';
-        document.getElementById('login-section').style.display = 'none';
-        // Dashboard kısmını göster...
-    }
-});
-        if (localStorage.getItem('loggedUser')) {
-            window.location.href = "/dashboard-sayfasi";
-        }
-        const loginForm = document.querySelector('form');
-        const loginBtn = document.getElementById('login-btn');
-        const errorBox = document.getElementById('error-box');
-        const btnText = document.getElementById('btn-text');
-        const spinner = document.getElementById('spinner');
+  <script>
+    // 1. Seçiciler (DOM Elements)
+const loginForm = document.getElementById('login-form');
+const loginBtn = document.getElementById('login-btn');
+const errorBox = document.getElementById('error-box');
+const errorMsgSpan = document.getElementById('error-message');
+const btnText = document.getElementById('btn-text');
+const spinner = document.getElementById('spinner');
+const resetModal = document.getElementById('resetModal');
 
-       loginForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
+// 2. Sayfa Yüklendiğinde Oturum Kontrolü
+if (localStorage.getItem('loggedUser')) {
+    window.location.href = "/dashboard-sayfasi";
+}
 
-    // Loading başlat
+
+// 4. Giriş Yapma İşlemi (Login)
+loginForm.addEventListener('submit', async function(e) {
+    e.preventDefault(); // JSON sayfasına gitmeyi engelleyen en kritik satır
+
+    // Arayüzü kilitle ve loading göster
     loginBtn.disabled = true;
-    btnText.innerText = "Kontrol Ediliyor...";
+    btnText.innerText = "Sistem Sorgulanıyor...";
     spinner.classList.remove('hidden');
     errorBox.classList.add('hidden');
-    errorBox.classList.remove('flex'); // Eski hatayı tamamen temizle
+    errorBox.classList.remove('flex');
 
-    // Veriyi JSON objesine çeviriyoruz (Kritik nokta)
     const formData = new FormData(loginForm);
-    const data = Object.fromEntries(formData.entries());
+    const payload = Object.fromEntries(formData.entries());
 
     try {
         const response = await fetch('/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json' // Sunucuya "Sana JSON gönderiyorum" diyoruz
-            },
-            body: JSON.stringify(data) // Objemizi yazıya (string) çevirip yolluyoruz
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
 
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // result.user.name ve result.user.role senin server.js'deki yeni yapına uygun
+            // Başarılı giriş: Verileri kaydet ve yönlendir
             localStorage.setItem('loggedUser', result.user.name);
             localStorage.setItem('userRole', result.user.role);
             window.location.href = result.redirect;
         } else {
-            // Backend'den gelen hata mesajını (result.error veya result.message) göster
-            showError(result.error || result.message || "Giriş başarısız!");
+            // Başarısız giriş: Hata mesajı göster
+            showError(result.error || "Kullanıcı adı veya şifre yanlış.");
         }
     } catch (err) {
-        console.error("Hata detayı:", err);
-        showError("Sunucuya bağlanılamadı!");
+        console.error("Login Hatası:", err);
+        showError("Sunucu bağlantısı koptu!");
     } finally {
+        // İşlem bitince butonu eski haline getir
         loginBtn.disabled = false;
-        btnText.innerText = "Sisteme Gir";
+        btnText.innerText = "Sisteme Eriş";
         spinner.classList.add('hidden');
     }
 });
 
-    function showError(msg) {
-        errorBox.innerText = msg;
-        errorBox.classList.remove('hidden');
-        // Sallanma animasyonu ekleyelim (Elegans bir dokunuş)
-        errorBox.classList.add('animate-bounce'); 
-        setTimeout(() => errorBox.classList.remove('animate-bounce'), 1000);
+// 5. Yardımcı Fonksiyonlar
+function showError(msg) {
+    if (errorMsgSpan) {
+        errorMsgSpan.innerText = msg;
     }
-    function showError(msg) {
-    const errorMsgSpan = document.getElementById('error-message');
-    errorMsgSpan.innerText = msg;
-    
-    // Hatayı gösterirken hem gizliliği kaldırıyoruz hem de görünüm tipini seçiyoruz
     errorBox.classList.remove('hidden');
-    errorBox.classList.add('flex'); // <--- Dinamik olarak burada ekle!
+    errorBox.classList.add('flex');
     
+    // Animasyon efekti
     errorBox.classList.add('animate-bounce'); 
     setTimeout(() => errorBox.classList.remove('animate-bounce'), 1000);
 }
-    </script>
+
+function scrollToLogin() {
+    document.getElementById('login-section').scrollIntoView({
+        behavior: 'smooth'
+    });
+}
+  </script>
 </body>
 </html>

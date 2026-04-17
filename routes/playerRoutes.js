@@ -6,4 +6,5 @@ const playerController = require('../controllers/playerController');
 router.get('/players', playerController.getPlayers);
 router.get('/wonderkids', playerController.getWonderkids);
 
+
 module.exports = router;

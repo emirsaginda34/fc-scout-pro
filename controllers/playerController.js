@@ -1,4 +1,38 @@
 const Player = require('../models/player');
+const fs = require('fs');
+const path = require('path');
+const bcrypt = require('bcryptjs');
+const usersFilePath = path.join(__dirname, '..', 'data', 'users.json');
+
+const getUsers = () => {
+    const data = fs.readFileSync(usersFilePath, 'utf-8');
+    return JSON.parse(data || '[]');
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { username, newPassword } = req.body;
+        let users = getUsers();
+
+        const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
+
+        if (userIndex === -1) {
+            return res.status(404).json({ success: false, error: "Kullanıcı bulunamadı!" });
+        }
+
+        // Yeni şifreyi hashle
+        const salt = bcrypt.genSaltSync(10);
+        users[userIndex].password = bcrypt.hashSync(newPassword, salt);
+
+        // Dosyaya geri yaz
+        fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+
+        res.json({ success: true, message: "Şifreniz başarıyla güncellendi. Giriş yapabilirsiniz." });
+    } catch (error) {
+        console.error("Sıfırlama hatası:", error);
+        res.status(500).json({ error: "Sunucu hatası" });
+    }
+};
 
 exports.getPlayers = async (req, res) => {
     try {
