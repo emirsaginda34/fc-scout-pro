@@ -268,9 +268,11 @@
     </footer>
     
     <script>
-  let allPlayers = [];
-let bookmarks = JSON.parse(localStorage.getItem('scout_bookmarks')) || [];
+let allPlayers = [];
+let bookmarks = [];
 const playersPerPage = 12;
+const API_URL = window.location.origin;
+const authToken = localStorage.getItem('authToken');
 
 // Hatanın çözümü olan satırlar burası:
 let currentSearch = '';
@@ -294,15 +296,39 @@ document.addEventListener('DOMContentLoaded', ()=> {
 });
 
 // --- 2. GÜVENLİK ---
-if (!localStorage.getItem('loggedUser')) {
+if (!localStorage.getItem('loggedUser') || !authToken) {
     alert("Bu sayfayı görmek için giriş yapmalısınız");
     window.location.href = "/";
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    loadBookmarks();
     loadPlayers(1); // Sayfa açılır açılmaz ilk sayfayı çek
     updateNavUI(); 
 });
+
+async function authFetch(url, options = {}) {
+    const headers = {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${authToken}`
+    };
+    const response = await fetch(url, { ...options, headers });
+    if (response.status === 401) {
+        logout();
+        throw new Error('Oturum suresi doldu');
+    }
+    return response;
+}
+
+async function loadBookmarks() {
+    try {
+        const response = await authFetch(`${API_URL}/api/favorites`);
+        const data = await response.json();
+        bookmarks = (data.players || []).map((p) => p.id || p.name);
+    } catch (err) {
+        bookmarks = [];
+    }
+}
 
 function updateNavUI() {
     const nameElement = document.getElementById('nav-username');
@@ -369,18 +395,18 @@ async function loadPlayers(page = 1) {
         const grid = document.getElementById('player-grid');
         if (grid) grid.innerHTML = '<div class="col-span-full text-center py-20 text-emerald-500 font-bold animate-pulse">Oyuncular yükleniyor...</div>';
 
-        let url = `http://localhost:3000/api/players?page=${page}&limit=${playersPerPage}&sort=${currentSort}&order=${currentSortDir}`;
+        let url = `${API_URL}/api/players?page=${page}&limit=${playersPerPage}&sort=${currentSort}&order=${currentSortDir}`;
         
         if (currentTier !== 'all') url += `&tier=${currentTier}`;
         if (currentPos !== 'all') url += `&pos=${encodeURIComponent(currentPos)}`;
         if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`; // Arama parametresi eklendi
 
-        const response = await fetch(url);
+        const response = await authFetch(url);
         const data = await response.json();
 
-        allPlayers = data.players; 
-        displayPlayers(data.players, data.totalPlayers);
-        renderPaginationButtons(data.totalPlayers, playersPerPage, page, data.players);
+        allPlayers = data.players || [];
+        displayPlayers(allPlayers, data.totalPlayers || 0);
+        renderPaginationButtons(data.totalPlayers || 0, playersPerPage, page, allPlayers);
     } catch (error) {
         console.error("Oyuncular yüklenirken hata oluştu:", error);
     }
@@ -656,13 +682,22 @@ function sortPlayers(key) {
 
 // Favorilere ekleme
 function toggleBookmark(playerId) {
+    const player = allPlayers.find((p) => (p.id || p.name) === playerId);
+    const playerName = player ? player.name : playerId;
     const index = bookmarks.indexOf(playerId);
     if (index === -1) {
         bookmarks.push(playerId);
+        authFetch(`${API_URL}/api/favorites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerName })
+        }).catch(() => {});
     } else {
         bookmarks.splice(index, 1);
+        authFetch(`${API_URL}/api/favorites/${encodeURIComponent(playerName)}`, {
+            method: 'DELETE'
+        }).catch(() => {});
     }
-    localStorage.setItem('scout_bookmarks', JSON.stringify(bookmarks));
     displayPlayers(allPlayers); 
 }
 // Favoriler butonuna basıldığında çalışacak ana fonksiyon
@@ -710,7 +745,7 @@ async function loadFavoritePlayersFromBackend() {
         const grid = document.getElementById('player-grid');
         grid.innerHTML = '<div class="col-span-full text-center py-20 text-yellow-500 font-bold animate-pulse">Favoriler yükleniyor...</div>';
 
-        const response = await fetch(`http://localhost:3000/api/players?names=${encodeURIComponent(bookmarks.join(','))}`);
+        const response = await authFetch(`${API_URL}/api/favorites`);
         
         if (!response.ok) throw new Error('Sunucu yanıt vermedi');
 
@@ -735,6 +770,14 @@ async function loadFavoritePlayersFromBackend() {
 function logout() {
     localStorage.clear();
     window.location.href = "/";
+}
+
+async function deletePlayer(encodedName) {
+    if (currentUser.role !== 'admin') return;
+    const confirmed = window.confirm('Oyuncu kaydi silinsin mi?');
+    if (!confirmed) return;
+    const response = await authFetch(`${API_URL}/api/players/${encodedName}`, { method: 'DELETE' });
+    if (response.ok) loadPlayers(currentPage);
 }
     </script>
 </body>

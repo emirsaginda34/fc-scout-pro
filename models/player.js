@@ -13,4 +13,9 @@ const playerSchema = new mongoose.Schema({
     stats: Object
 }, { strict: false });
 
+playerSchema.index({ name: 1 });
+playerSchema.index({ pos: 1 });
+playerSchema.index({ rating: -1 });
+playerSchema.index({ age: 1 });
+
 module.exports = mongoose.model('Player', playerSchema, 'players');

@@ -109,8 +109,10 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Başarılı: Giriş sayfasına yönlendir
-                    window.location.href = '/?msg=kayit-basarili';
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('loggedUser', result.user.name);
+                    localStorage.setItem('userRole', result.user.role);
+                    window.location.href = result.redirect || '/dashboard-sayfasi';
                 } else {
                     // Hata: Backend'den gelen mesajı (örn: "Alınmış!") modalda göster
                     showError(result.error);

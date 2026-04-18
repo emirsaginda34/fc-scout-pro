@@ -1,43 +1,9 @@
 const Player = require('../models/player');
-const fs = require('fs');
-const path = require('path');
-const bcrypt = require('bcryptjs');
-const usersFilePath = path.join(__dirname, '..', 'data', 'users.json');
-
-const getUsers = () => {
-    const data = fs.readFileSync(usersFilePath, 'utf-8');
-    return JSON.parse(data || '[]');
-};
-
-exports.resetPassword = async (req, res) => {
-    try {
-        const { username, newPassword } = req.body;
-        let users = getUsers();
-
-        const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
-
-        if (userIndex === -1) {
-            return res.status(404).json({ success: false, error: "Kullanıcı bulunamadı!" });
-        }
-
-        // Yeni şifreyi hashle
-        const salt = bcrypt.genSaltSync(10);
-        users[userIndex].password = bcrypt.hashSync(newPassword, salt);
-
-        // Dosyaya geri yaz
-        fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
-
-        res.json({ success: true, message: "Şifreniz başarıyla güncellendi. Giriş yapabilirsiniz." });
-    } catch (error) {
-        console.error("Sıfırlama hatası:", error);
-        res.status(500).json({ error: "Sunucu hatası" });
-    }
-};
 
 exports.getPlayers = async (req, res) => {
     try {
         let query = {};
-        const { tier, pos, search, names } = req.query;
+        const { tier, pos, search, names, page, limit, sort, order } = req.query;
 
         if (names) {
             query.name = { $in: names.split(',') };
@@ -53,10 +19,8 @@ exports.getPlayers = async (req, res) => {
             else if (tier === 'iron') query.rating = { $lt: 60 };
         }
         
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 12;
-        const sortField = req.query.sort || 'rating';
-        const sortOrder = req.query.order === 'asc' ? 1 : -1;
+        const sortField = sort || 'rating';
+        const sortOrder = order === 'asc' ? 1 : -1;
 
         const players = await Player.find(query)
             .sort({ [sortField]: sortOrder })
@@ -64,9 +28,9 @@ exports.getPlayers = async (req, res) => {
             .skip((page - 1) * limit);
 
         const totalPlayers = await Player.countDocuments(query);
-        res.json({ players: players || [], totalPlayers });
+        res.json({ success: true, players: players || [], totalPlayers });
     } catch (error) {
-        res.status(500).json({ error: "Sunucu hatası" });
+        res.status(500).json({ success: false, error: "Sunucu hatası" });
     }
 };
 
@@ -93,8 +57,40 @@ exports.getWonderkids = async (req, res) => {
         });
 
         enrichedMetaPlayers.sort((a, b) => b.potential - a.potential);
-        res.json(enrichedMetaPlayers.slice(0, 50));
+        res.json({ success: true, players: enrichedMetaPlayers.slice(0, 50) });
     } catch (error) {
-        res.status(500).json({ success: false });
+        res.status(500).json({ success: false, error: 'Sunucu hatasi' });
+    }
+};
+
+exports.createPlayer = async (req, res) => {
+    try {
+        const payload = req.body;
+        const created = await Player.create(payload);
+        res.status(201).json({ success: true, player: created });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Oyuncu eklenemedi.' });
+    }
+};
+
+exports.updatePlayer = async (req, res) => {
+    try {
+        const playerName = decodeURIComponent(req.params.playerName);
+        const player = await Player.findOneAndUpdate({ name: playerName }, req.body, { new: true });
+        if (!player) return res.status(404).json({ success: false, error: 'Oyuncu bulunamadi.' });
+        res.json({ success: true, player });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Oyuncu guncellenemedi.' });
+    }
+};
+
+exports.deletePlayer = async (req, res) => {
+    try {
+        const playerName = decodeURIComponent(req.params.playerName);
+        const result = await Player.findOneAndDelete({ name: playerName });
+        if (!result) return res.status(404).json({ success: false, error: 'Oyuncu bulunamadi.' });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Oyuncu silinemedi.' });
     }
 };

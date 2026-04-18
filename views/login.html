@@ -135,7 +135,7 @@ const spinner = document.getElementById('spinner');
 const resetModal = document.getElementById('resetModal');
 
 // 2. Sayfa Yüklendiğinde Oturum Kontrolü
-if (localStorage.getItem('loggedUser')) {
+if (localStorage.getItem('authToken')) {
     window.location.href = "/dashboard-sayfasi";
 }
 
@@ -165,6 +165,7 @@ loginForm.addEventListener('submit', async function(e) {
 
         if (response.ok && result.success) {
             // Başarılı giriş: Verileri kaydet ve yönlendir
+            localStorage.setItem('authToken', result.token);
             localStorage.setItem('loggedUser', result.user.name);
             localStorage.setItem('userRole', result.user.role);
             window.location.href = result.redirect;

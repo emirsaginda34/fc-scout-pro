@@ -78,13 +78,14 @@
 
     <script>
     // 0. API URL Tanımlaması (Lokale istek atmak için)
-    const API_URL = 'http://localhost:3000';
+    const API_URL = window.location.origin;
+    const authToken = localStorage.getItem('authToken');
 
     // 1. SAYFA YÜKLENDİĞİNDE VERİLERİ VE LİMİTLERİ ÇEK
     window.addEventListener('DOMContentLoaded', async () => {
         const storedName = localStorage.getItem('loggedUser');
         
-        if (!storedName) {
+        if (!storedName || !authToken) {
             window.location.href = "/";
             return; // Kodun geri kalanını çalıştırma
         }
@@ -106,15 +107,9 @@
     async function refreshLimits() {
         try {
             // 1. Tarayıcının hafızasından giriş yapmış kullanıcıyı alıyoruz
-            const loggedUser = localStorage.getItem('loggedUser');
-            
-            if (!loggedUser) {
-                console.error("Giriş yapmış kullanıcı bulunamadı.");
-                return;
-            }
-
-            // 2. İstek atarken sonuna ?username=KullaniciAdi ekliyoruz
-            const res = await fetch(`${API_URL}/api/user-status?username=${encodeURIComponent(loggedUser)}`);
+            const res = await fetch(`${API_URL}/api/user-status`, {
+                headers: { Authorization: `Bearer ${authToken}` }
+            });
             const data = await res.json();
 
             if (data.success && data.limits) {
@@ -145,13 +140,14 @@
         const newPassword = document.getElementById('password-input').value;
         
         // ŞU ANKİ GİRİŞ YAPMIŞ KULLANICIYI HAFIZADAN ÇEKİYORUZ
-        const currentUsername = localStorage.getItem('loggedUser'); 
-
         try {
             const response = await fetch(`${API_URL}/api/update-settings`, {
                 method: 'POST', // Bunun POST olduğundan emin oluyoruz
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentUsername, newUsername, newPassword }) // Mevcut ismi de gönderdik!
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ newUsername, newPassword })
             });
 
             const data = await response.json();
@@ -159,10 +155,11 @@
             if (data.success) {
                 alert(data.message);
                 // Eğer kullanıcı adı değiştiyse hafızayı da güncelliyoruz
-                localStorage.setItem('loggedUser', newUsername);
+                if (data.user?.name) localStorage.setItem('loggedUser', data.user.name);
                 
-                document.getElementById('display-name').innerText = newUsername;
-                document.getElementById('profile-initial').innerText = newUsername.charAt(0).toUpperCase();
+                const currentName = data.user?.name || newUsername;
+                document.getElementById('display-name').innerText = currentName;
+                document.getElementById('profile-initial').innerText = currentName.charAt(0).toUpperCase();
 
                 await refreshLimits();
             } else {
