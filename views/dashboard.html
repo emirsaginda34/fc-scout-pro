@@ -147,9 +147,7 @@
                 <input type="text" id="player-search" placeholder="Oyuncu adı, takım veya pozisyon ara..." 
                        class="w-full bg-emerald-900/20 border border-emerald-500/20 rounded-2xl py-4 pl-12 pr-4 text-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all backdrop-blur-sm placeholder-emerald-700/50 font-medium">
             </div>
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-emerald-900/10 p-4 rounded-2xl border border-emerald-500/5">
-    
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-emerald-900/10 p-4 rounded-2xl border border-emerald-500/5">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-emerald-900/10 p-4 rounded-2xl border border-emerald-500/5">
     
     <div class="flex flex-wrap items-center gap-2 sm:gap-4">
         <select id="pos-filter" onchange="filterByPosition(this.value)" 
@@ -197,7 +195,7 @@
         </div>
     </div>
 
-    <div class="flex items-center gap-2 flex-nowrap whitespace-nowrap">
+    <div class="flex flex-wrap items-center gap-2 xl:justify-end">
         <span class="text-[10px] text-emerald-500/50 font-black tracking-widest uppercase mr-1">Sırala:</span>
         
         <button onclick="sortPlayers('rating')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">
@@ -211,9 +209,28 @@
         <button onclick="sortPlayers('age')" class="text-[10px] font-bold bg-emerald-500/5 hover:bg-emerald-400 hover:text-emerald-950 border border-emerald-500/20 px-4 py-2 rounded-xl transition-all uppercase cursor-pointer">
             Yaş ↑
         </button>
-    </div>
 
+        <div class="flex items-center gap-3 ml-0 xl:ml-4 w-full sm:w-auto justify-end">
+            <div id="compare-badge" class="text-xs text-emerald-300 whitespace-nowrap">0 oyuncu secili</div>
+            <button onclick="runCompare()" class="px-4 py-2 rounded-xl bg-emerald-500 text-emerald-950 font-bold whitespace-nowrap">
+                Karşılaştırmayı Başlat
+            </button>
+        </div>
+    </div>
 </div>
+
+<div id="compare-result"></div>
+
+<div id="ui-toast" class="fixed right-4 bottom-4 z-[120] hidden max-w-sm rounded-2xl border border-emerald-400/30 bg-emerald-900/95 px-4 py-3 shadow-2xl shadow-emerald-950/50 backdrop-blur-md">
+    <div class="flex items-start gap-3">
+        <div id="ui-toast-icon" class="mt-0.5 text-emerald-300">i</div>
+        <div>
+            <p id="ui-toast-title" class="text-xs font-black uppercase tracking-widest text-emerald-300">Bilgilendirme</p>
+            <p id="ui-toast-message" class="mt-1 text-sm font-medium text-emerald-50">Mesaj</p>
+        </div>
+    </div>
+</div>
+
         </section>
         <div id="player-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       </div>
@@ -230,36 +247,7 @@
                 <button onclick="closeModal()" class="px-5 py-2.5 rounded-xl bg-emerald-800 text-emerald-300 text-sm font-semibold hover:bg-emerald-700 cursor-pointer">Kapat</button>
             </div>
         </div>
-    </div> <div id="add-modal" class="fixed inset-0 bg-emerald-950/95 backdrop-blur-xl z-[110] hidden items-center justify-center p-4 opacity-0 transition-all duration-300">
-        <div class="bg-emerald-900 border border-emerald-500/20 rounded-3xl w-full max-w-lg p-8 shadow-2xl">
-            <h2 class="text-2xl font-bold text-white mb-6 tracking-tight">Yeni Scout Raporu</h2>
-            
-            <form id="add-player-form" class="space-y-4">
-                <input type="text" name="name" placeholder="Oyuncu Adı Soyadı" class="w-full bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="text" name="team" placeholder="Takımı" class="bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required>
-                    <input type="text" name="pos" placeholder="Pozisyon (Örn: OS)" class="bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required>
-                </div>
-
-                <div class="grid grid-cols-3 gap-4">
-                    <input type="number" name="rating" placeholder="OVR" class="bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required min="1" max="99">
-                    <input type="number" name="age" placeholder="Yaş" class="bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required>
-                    <input type="number" name="pace" placeholder="PACE" class="bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required min="1" max="99">
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="number" name="shoot" placeholder="SHOOT" class="bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required min="1" max="99">
-                    <input type="number" name="pass" placeholder="PASS" class="bg-emerald-950/50 border border-emerald-500/10 rounded-xl p-3 text-emerald-50 outline-none focus:border-emerald-500/50 transition-all" required min="1" max="99">
-                </div>
-                
-                <div class="flex gap-3 mt-8">
-                    <button type="button" onclick="closeModal()" class="flex-1 py-3.5 rounded-xl bg-emerald-800 text-emerald-300 font-bold hover:bg-emerald-700 transition-all cursor-pointer">İptal</button>
-                    <button type="submit" class="flex-1 py-3.5 rounded-xl bg-emerald-500 text-emerald-950 font-black hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer">SİSTEME KAYDET</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    </div> 
      <footer class="bg-emerald-950/80 text-emerald-200/40 font-medium py-6 px-4 text-center text-[10px] border-t border-emerald-900">
         <div class="max-w-4xl mx-auto leading-relaxed">
             All product names, logos, and brands are the property of their respective owners.<br>
@@ -434,6 +422,7 @@ function displayPlayers(players, totalCount = null) {
     grid.innerHTML = currentList.map(p => {
         const rating = Number(p.rating);
         const isFav = bookmarks.includes(p.id || p.name);
+        const isCompared = compareSelection.includes(p.name);
         
         let cardColor, textColor, borderColor;
         if (rating >= 80) {
@@ -494,6 +483,16 @@ function displayPlayers(players, totalCount = null) {
                                 class="flex-grow py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-[10px] transition-all uppercase border border-white/5 cursor-pointer">
                             Raporu Görüntüle
                         </button>
+
+                        <button
+                            onclick="toggleCompare('${p.name.replace(/'/g, "\\'")}')"
+                            class="px-3 py-2 rounded-xl text-[10px] font-bold uppercase cursor-pointer transition-all border ${
+                                isCompared
+                                    ? 'bg-indigo-500 text-white border-indigo-300 shadow-lg shadow-indigo-500/30 scale-105'
+                                    : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/35'
+                            }">
+                            ${isCompared ? 'Secildi' : 'Karsilastir'}
+                        </button>
                         
                         ${currentUser.role === 'admin' ? `
                         <button onclick="deletePlayer('${encodeURIComponent(p.name)}')" 
@@ -508,6 +507,167 @@ function displayPlayers(players, totalCount = null) {
     }).join('');
 }
 
+// views/dashboard.html <script> içine EKLE
+// 1) Seçili oyuncuları tutacak dizi (max 3)
+let compareSelection = [];
+let compareLastPlayers = [];
+let comparePanelOpen = true;
+let toastTimer = null;
+
+// 2) Kartta "Karşılaştır" butonundan çağrılacak fonksiyon
+function toggleCompare(playerName) {
+    // Zaten seçiliyse çıkar
+    if (compareSelection.includes(playerName)) {
+        compareSelection = compareSelection.filter((n) => n !== playerName);
+    } else {
+        // Yeni ekleme yapılacaksa max 3 kontrolü
+        if (compareSelection.length >= 3) {
+            showToast('Sinir doldu', 'En fazla 3 oyuncu karsilastirabilirsiniz.', 'warning');
+            return;
+        }
+        compareSelection.push(playerName);
+    }
+
+    // UI sayaç göstergesini güncelle
+    updateCompareBadge();
+    displayPlayers(allPlayers);
+}
+
+// 3) Üstte küçük sayaç/label güncelleme
+function updateCompareBadge() {
+    const badge = document.getElementById('compare-badge');
+    if (!badge) return;
+    badge.innerText = `${compareSelection.length} oyuncu secili`;
+}
+
+function showToast(title, message, type = 'info') {
+    const toast = document.getElementById('ui-toast');
+    const toastTitle = document.getElementById('ui-toast-title');
+    const toastMessage = document.getElementById('ui-toast-message');
+    const toastIcon = document.getElementById('ui-toast-icon');
+    if (!toast || !toastTitle || !toastMessage || !toastIcon) return;
+
+    const styles = {
+        info: {
+            icon: 'i',
+            titleClass: 'text-emerald-300',
+            iconClass: 'text-emerald-300',
+            borderClass: 'border-emerald-400/30',
+            bgClass: 'bg-emerald-900/95'
+        },
+        warning: {
+            icon: '!',
+            titleClass: 'text-amber-300',
+            iconClass: 'text-amber-300',
+            borderClass: 'border-amber-400/30',
+            bgClass: 'bg-amber-900/95'
+        },
+        error: {
+            icon: 'x',
+            titleClass: 'text-red-300',
+            iconClass: 'text-red-300',
+            borderClass: 'border-red-400/30',
+            bgClass: 'bg-red-900/95'
+        }
+    };
+
+    const selected = styles[type] || styles.info;
+    toast.classList.remove('hidden', 'border-emerald-400/30', 'border-amber-400/30', 'border-red-400/30', 'bg-emerald-900/95', 'bg-amber-900/95', 'bg-red-900/95');
+    toast.classList.add(selected.borderClass, selected.bgClass);
+    toastTitle.className = `text-xs font-black uppercase tracking-widest ${selected.titleClass}`;
+    toastIcon.className = `mt-0.5 ${selected.iconClass}`;
+    toastIcon.textContent = selected.icon;
+    toastTitle.textContent = title;
+    toastMessage.textContent = message;
+
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 2600);
+}
+
+// 4) "Karşılaştırmayı Başlat" butonundan çağrılır
+async function runCompare() {
+    // En az 2 oyuncu şartı
+    if (compareSelection.length < 2) {
+        showToast('Oyuncu secimi eksik', 'Karsilastirma icin en az 2 oyuncu secmelisiniz.', 'warning');
+        return;
+    }
+
+    try {
+        // Seçili isimleri query'ye çevir
+        const namesParam = encodeURIComponent(compareSelection.join(','));
+
+        // Token'lı fetch helper'ını kullan (sende authFetch vardı)
+        const response = await authFetch(`${API_URL}/api/compare?names=${namesParam}`);
+        const data = await response.json();
+
+        if (!data.success) {
+            alert(data.error || 'Karsilastirma basarisiz.');
+            return;
+        }
+
+        compareLastPlayers = data.players || [];
+        comparePanelOpen = true;
+        renderCompareTable(compareLastPlayers);
+    } catch (err) {
+        console.error(err);
+        showToast('Karsilastirma hatasi', 'Karsilastirma sirasinda hata olustu.', 'error');
+    }
+}
+
+function toggleComparePanel() {
+    if (!compareLastPlayers.length) return;
+    comparePanelOpen = !comparePanelOpen;
+    renderCompareTable(compareLastPlayers);
+}
+
+// 5) Basit karşılaştırma tablosu render
+function renderCompareTable(players) {
+    const container = document.getElementById('compare-result');
+    if (!container) return;
+
+    // Karşılaştırılacak stat alanları
+    const statKeys = ['rating', 'pace', 'shoot', 'pass', 'drib', 'def', 'phy', 'age'];
+
+    // Header satırı: Oyuncu isimleri
+    const headerCols = players.map((p) => `<th class="p-2 border">${p.name}</th>`).join('');
+
+    // Her stat için bir satır üret
+    const rows = statKeys.map((key) => {
+        const cols = players.map((p) => `<td class="p-2 border text-center">${p[key] ?? '-'}</td>`).join('');
+        return `<tr><td class="p-2 border font-bold uppercase">${key}</td>${cols}</tr>`;
+    }).join('');
+
+    const panelToggleText = comparePanelOpen ? 'Tabloyu Kapat' : 'Tabloyu Ac';
+    const panelToggleIcon = comparePanelOpen ? '▾' : '▸';
+    const contentClass = comparePanelOpen ? 'block' : 'hidden';
+
+    // Tabloyu bas
+    container.innerHTML = `
+        <div class="mt-6 bg-emerald-900/20 border border-emerald-500/20 rounded-2xl p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <h3 class="text-lg font-bold">Oyuncu Karsilastirma</h3>
+                <button onclick="toggleComparePanel()" class="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 text-xs font-bold uppercase tracking-wide hover:bg-emerald-500/25 transition-all">
+                    <span class="mr-1">${panelToggleIcon}</span>${panelToggleText}
+                </button>
+            </div>
+            <div class="overflow-x-auto ${contentClass}">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr>
+                            <th class="p-2 border">Stat</th>
+                            ${headerCols}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
 
 // --- 5. SAYFALAMA SİSTEMİ ---
 function renderPaginationButtons(totalPlayers, playersPerPage, activePage, currentList) {

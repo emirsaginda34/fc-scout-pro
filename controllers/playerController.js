@@ -1,3 +1,4 @@
+const { success } = require('zod');
 const Player = require('../models/player');
 
 exports.getPlayers = async (req, res) => {
@@ -94,3 +95,61 @@ exports.deletePlayer = async (req, res) => {
         res.status(500).json({ success: false, error: 'Oyuncu silinemedi.' });
     }
 };
+
+// controllers/playerController.js içine EKLE
+// Bu endpoint, query'den gelen oyuncu isimlerine göre oyuncuları getirir.
+// Örnek istek: /api/compare?names=Kylian%20Mbapp%C3%A9,Erling%20Haaland
+exports.comparePlayers = async (req, res) => {
+    try {
+        // names query'sini al
+        const { names } = req.query;
+
+        // names yoksa veya boşsa 400 döndür
+        if (!names || typeof names !== 'string') {
+            return res.status(400).json({
+                success: false,
+                error: 'Karsilastirma icin names parametresi gerekli.'
+            });
+        }
+
+        // Virgülle gelen isimleri parçala, trimle, boşları temizle
+        const playerNames = names
+            .split(',')
+            .map((n) => n.trim())
+            .filter(Boolean);
+
+        // En az 2, en fazla 3 oyuncu sınırı koy (UI için mantıklı)
+        if (playerNames.length < 2 || playerNames.length > 3) {
+            return res.status(400).json({
+                success: false,
+                error: 'Karsilastirma icin 2 veya 3 oyuncu secmelisiniz.'
+            });
+        }
+
+        // DB'den oyuncuları çek
+        const players = await Player.find({ name: { $in: playerNames } }).lean();
+
+        // Seçilen isimlerden bulunamayanlar varsa listeleriz (debug için faydalı)
+        const foundNames = players.map((p) => p.name);
+        const missingNames = playerNames.filter((n) => !foundNames.includes(n));
+
+        // Oyuncu sıralamasını, kullanıcının seçtiği sırayı koruyacak şekilde düzelt
+        const orderedPlayers = playerNames
+            .map((name) => players.find((p) => p.name === name))
+            .filter(Boolean);
+
+        // Karşılaştırma için özet metrikler (ortalama vb.) hesaplanabilir
+        // Şimdilik basit bir payload dönüyoruz
+        return res.json({
+            success: true,
+            players: orderedPlayers,
+            missingNames
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: 'Karsilastirma verileri alinamadi.'
+        });
+    }
+};
+

@@ -11,5 +11,6 @@ router.get('/wonderkids', requireAuth, playerController.getWonderkids);
 router.post('/players', requireAuth, requireRole('admin'), validateBody(playerPayloadSchema), playerController.createPlayer);
 router.put('/players/:playerName', requireAuth, requireRole('admin'), validateBody(playerPayloadSchema), playerController.updatePlayer);
 router.delete('/players/:playerName', requireAuth, requireRole('admin'), playerController.deletePlayer);
+router.get('/compare', requireAuth, playerController.comparePlayers);
 
 module.exports = router;
