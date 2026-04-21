@@ -17,9 +17,17 @@ async function getFavorites(req, res, next) {
 async function addFavorite(req, res, next) {
     try {
         const { playerName } = req.body;
+        const player = await Player.findOne({ name: playerName }).lean();
         await Favorite.updateOne(
             { userId: req.user.userId, playerName },
-            { $setOnInsert: { userId: req.user.userId, playerName } },
+            {
+                $setOnInsert: {
+                    userId: req.user.userId,
+                    playerName,
+                    lastKnownRating: player?.rating ?? null,
+                    lastKnownPos: player?.pos ?? null
+                }
+            },
             { upsert: true }
         );
         res.status(201).json({ success: true });
