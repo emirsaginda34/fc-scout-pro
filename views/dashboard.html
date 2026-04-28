@@ -272,6 +272,21 @@
         <p class="text-[10px] uppercase tracking-widest text-emerald-400 mb-2">Bu sayfadaki oyuncular</p>
         <div id="admin-player-list" class="space-y-2"></div>
     </div>
+
+    <div class="mt-6 border-t border-emerald-500/20 pt-4">
+        <div class="flex items-center justify-between mb-2">
+            <p class="text-[10px] uppercase tracking-widest text-emerald-400">Kayitli Kullanicilar</p>
+            <button onclick="loadAdminUsers()" class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-200 text-[10px] font-bold uppercase">Yenile</button>
+        </div>
+        <input
+            id="admin-users-search"
+            type="text"
+            placeholder="Kullanici ara..."
+            oninput="renderAdminUsers()"
+            class="mb-2 w-full bg-emerald-950/50 border border-emerald-500/20 rounded-xl px-3 py-2 text-xs"
+        >
+        <div id="admin-users-list" class="space-y-2"></div>
+    </div>
     </div>
 </div>
 
@@ -459,6 +474,7 @@ function setupAdminPanel() {
     if (currentUser.role === 'admin') {
         panel.classList.remove('hidden');
         renderAdminPlayerList();
+        loadAdminUsers();
     } else {
         panel.classList.add('hidden');
     }
@@ -578,6 +594,73 @@ async function submitAdminPlayerForm() {
         loadPlayers(currentPage);
     } catch (err) {
         showToast('Sunucu hatasi', 'Oyuncu kaydi sirasinda hata olustu.', 'error');
+    }
+}
+
+async function loadAdminUsers() {
+    if (currentUser.role !== 'admin') return;
+    const list = document.getElementById('admin-users-list');
+    if (list) list.innerHTML = '<p class="text-xs text-emerald-300/70">Kullanicilar yukleniyor...</p>';
+
+    try {
+        const response = await authFetch(`${API_URL}/api/admin/users`);
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            showToast('Kullanici listesi', data.error || 'Kullanicilar getirilemedi.', 'error');
+            return;
+        }
+        adminUsersCache = data.users || [];
+        renderAdminUsers();
+    } catch (err) {
+        showToast('Sunucu hatasi', 'Kullanicilar yuklenirken hata olustu.', 'error');
+    }
+}
+
+function renderAdminUsers(users = adminUsersCache) {
+    const list = document.getElementById('admin-users-list');
+    if (!list) return;
+    const search = document.getElementById('admin-users-search')?.value?.trim().toLowerCase() || '';
+    const filteredUsers = (users || []).filter((u) => u.username.toLowerCase().includes(search));
+
+    if (!filteredUsers.length) {
+        list.innerHTML = '<p class="text-xs text-emerald-300/60">Kayitli kullanici yok.</p>';
+        return;
+    }
+
+    list.innerHTML = filteredUsers.map((user) => `
+        <div class="rounded-xl border border-emerald-500/20 bg-emerald-950/40 p-2 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-xs font-bold text-white truncate">${user.username}</p>
+                <p class="text-[10px] text-emerald-300/70 uppercase">${user.role} ${user.isBanned ? ' | Yasakli' : ''}</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button
+                    onclick="toggleUserBan('${user._id}', ${user.isBanned})"
+                    class="px-2 py-1 rounded-lg ${user.isBanned ? 'bg-emerald-500/20 text-emerald-200' : 'bg-red-500/20 text-red-300'} text-[10px] font-bold uppercase">
+                    ${user.isBanned ? 'Yasagi Kaldir' : 'Yasakla'}
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function toggleUserBan(userId, currentlyBanned) {
+    if (currentUser.role !== 'admin') return;
+    try {
+        const response = await authFetch(`${API_URL}/api/admin/users/${userId}/ban`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isBanned: !currentlyBanned })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            showToast('Islem basarisiz', data.error || 'Kullanici durumu guncellenemedi.', 'error');
+            return;
+        }
+        showToast('Basarili', !currentlyBanned ? 'Kullanici yasaklandi.' : 'Kullanici yasagi kaldirildi.', 'info');
+        loadAdminUsers();
+    } catch (err) {
+        showToast('Sunucu hatasi', 'Kullanici yasaklama isleminde hata olustu.', 'error');
     }
 }
 
@@ -780,6 +863,7 @@ let toastTimer = null;
 let notificationsPanelOpen = false;
 let adminEditingPlayerName = null;
 let adminPanelOpen = true;
+let adminUsersCache = [];
 
 // 2) Kartta "Karşılaştır" butonundan çağrılacak fonksiyon
 function toggleCompare(playerName) {

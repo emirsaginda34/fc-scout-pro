@@ -43,6 +43,7 @@ async function login(req, res, next) {
         const { username, password } = req.body;
         const user = await User.findOne({ username: username.toLowerCase() });
         if (!user) throw new AppError('Kullanici adi veya sifre hatali.', 401);
+        if (user.isBanned) throw new AppError('Hesabiniz yonetici tarafindan yasaklandi.', 403);
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) throw new AppError('Kullanici adi veya sifre hatali.', 401);

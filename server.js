@@ -24,12 +24,14 @@ const playerRoutes = require('./routes/playerRoutes');
 const userRoutes = require('./routes/userRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 app.use('/', authRoutes);
 app.use('/api', playerRoutes);
 app.use('/api', userRoutes);
 app.use('/api', favoriteRoutes);
 app.use('/api', notificationRoutes);
+app.use('/api', adminRoutes);
 
 app.use(express.static('views'));
 
